@@ -7,7 +7,8 @@ parametrizado por la edad gestacional (semanas de amenorrea).
 Idea general
 ------------
 1. La biometría (DBP, CC, CA, LF) se obtiene de las regresiones de
-   Hadlock et al. (Radiology 1984;152:497-501), válidas aprox. 12-40 semanas:
+   Hadlock et al. (Radiology 1984;152:497-501, doi:10.1148/radiology.152.2.6739822),
+   válidas aprox. 12-40 semanas:
        DBP = -3.08  + 0.41 EG - 0.000061  EG^3     [cm]
        CC  = -11.48 + 1.56 EG - 0.0002548 EG^3     [cm]
        CA  = -13.3  + 1.61 EG - 0.00998   EG^2     [cm]
@@ -63,7 +64,7 @@ def biometria(eg: float) -> dict:
     cc = -11.48 + 1.56 * eg - 0.0002548 * eg**3
     ca = -13.3 + 1.61 * eg - 0.00998 * eg**2
     lf = -3.91 + 0.427 * eg - 0.0034 * eg**2
-    # Peso fetal estimado, Hadlock et al. AJOG 1985 (CC, CA, LF en cm)
+    # Peso fetal estimado, Hadlock et al. AJOG 1985, doi:10.1016/0002-9378(85)90298-4 (CC, CA, LF en cm)
     pfe = 10 ** (1.326 - 0.00326 * ca * lf + 0.0107 * cc + 0.0438 * ca + 0.158 * lf)
     return {"EG_sem": eg, "DBP": 10 * dbp, "CC": 10 * cc,
             "CA": 10 * ca, "LF": 10 * lf, "PFE_g": pfe}

@@ -18,7 +18,7 @@ Code identifiers are in Spanish; see the glossary in the [English README](../REA
 ## Biometry
 
 Gestational age (GA, `eg` in the code, in weeks) sets four measurements through the
-regressions of Hadlock et al. (1984), valid roughly from 12 to 40 weeks:
+regressions of Hadlock et al. ([1984](https://doi.org/10.1148/radiology.152.2.6739822)), valid roughly from 12 to 40 weeks:
 
 | Measurement | Regression (cm) |
 |---|---|
@@ -27,7 +27,7 @@ regressions of Hadlock et al. (1984), valid roughly from 12 to 40 weeks:
 | AC | −13.3 + 1.61·GA − 0.00998·GA² |
 | FL | −3.91 + 0.427·GA − 0.0034·GA² |
 
-The estimated fetal weight (EFW) comes from Hadlock et al. (1985) using HC, AC and FL,
+The estimated fetal weight (EFW) comes from Hadlock et al. ([1985](https://doi.org/10.1016/0002-9378(85)90298-4)) using HC, AC and FL,
 and is used to check the mesh volume.
 
 ## Geometry

@@ -16,7 +16,7 @@ En postura de reposo, las dos construyen exactamente las mismas piezas corporale
 ## Biometría
 
 La edad gestacional (EG, semanas) fija cuatro medidas con las regresiones de
-Hadlock et al. (1984), válidas aproximadamente de 12 a 40 semanas:
+Hadlock et al. ([1984](https://doi.org/10.1148/radiology.152.2.6739822)), válidas aproximadamente de 12 a 40 semanas:
 
 | Medida | Regresión (cm) |
 |---|---|
@@ -25,7 +25,7 @@ Hadlock et al. (1984), válidas aproximadamente de 12 a 40 semanas:
 | CA | −13.3 + 1.61·EG − 0.00998·EG² |
 | LF | −3.91 + 0.427·EG − 0.0034·EG² |
 
-El peso fetal estimado (PFE) se calcula con Hadlock et al. (1985) a partir de CC,
+El peso fetal estimado (PFE) se calcula con Hadlock et al. ([1985](https://doi.org/10.1016/0002-9378(85)90298-4)) a partir de CC,
 CA y LF, y sirve para comprobar el volumen de la malla.
 
 ## Geometría

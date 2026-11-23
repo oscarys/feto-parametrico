@@ -13,7 +13,7 @@ from feto_parametrico.tejidos import T
 from feto_parametrico.vista3d import _malla_prim_np
 
 
-# Tabla de Hadlock et al. (Radiology 1984): valores medios en cm
+# Tabla de Hadlock et al. (Radiology 1984, doi:10.1148/radiology.152.2.6739822): valores medios en cm
 @pytest.mark.parametrize("eg, dbp, cc", [(12, 1.7, 6.8), (20, 4.6, 17.7), (40, 9.4, 34.6)])
 def test_biometria_hadlock(eg, dbp, cc):
     b = biometria(eg)
