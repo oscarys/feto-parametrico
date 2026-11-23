@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# Salidas generadas (se reproducen con los comandos)
+*.stl
+*.obj
+*.ply
+*.vtp
+*.mp4
+lote_eco/
+/salidas/
+
+# Imágenes generadas en la raíz (las de la documentación viven en docs/img/)
+/*.png
+/*.gif
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "Si usas este software, por favor cítalo así."
+title: "feto-parametrico: feto humano paramétrico y simulación de ecografía obstétrica"
+type: software
+authors:
+  - family-names: "Yáñez Suárez"
+    given-names: "Oscar"
+    affiliation: "Universidad Autónoma Metropolitana, Unidad Iztapalapa (LINI)"
+version: "0.1.0"
+date-released: "2026-11-23"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/oscarys/feto-parametrico"
+keywords:
+  - fetal ultrasound
+  - simulation
+  - fetal biometry
+  - medical education

@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "feto-parametrico"
+version = "0.1.0"
+description = "Feto humano paramétrico por edad gestacional, con órganos y movimiento, y simulación de ecografía obstétrica para entrenamiento"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Oscar Yáñez Suárez" }]
+keywords = ["ultrasonido", "ecografía", "obstetricia", "feto", "simulación", "biometría fetal",
+            "ultrasound", "fetal", "simulation", "medical imaging"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Natural Language :: Spanish",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "scikit-image",
+    "trimesh",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+vtk = ["pyvista", "imageio", "imageio-ffmpeg"]
+gui = ["pyvista", "pyvistaqt", "PyQt6"]
+dev = ["pytest"]
+todo = ["feto-parametrico[vtk,gui,dev]"]
+
+[project.scripts]
+feto-malla = "feto_parametrico.superficie:main"
+feto-vista-previa = "feto_parametrico.cli.vista_previa:main"
+feto-render = "feto_parametrico.cli.render_pyvista:main"
+feto-animacion = "feto_parametrico.cli.animacion3d:main"
+feto-eco = "feto_parametrico.cli.demo_ecografia:main"
+feto-sonda-emulador = "feto_parametrico.fuentes_sonda:main"
+
+[project.gui-scripts]
+feto-visor = "feto_parametrico.apps.visor:main"
+feto-escaner = "feto_parametrico.apps.escaner:main"
+
+[project.urls]
+Repository = "https://github.com/oscarys/feto-parametrico"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+feto_parametrico = ["traducciones/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["vtk: requiere PyVista/VTK (se omite si no está instalado)"]
+filterwarnings = ["ignore::DeprecationWarning:skimage.*"]
