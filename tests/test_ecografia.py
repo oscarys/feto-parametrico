@@ -8,8 +8,9 @@ import textwrap
 import numpy as np
 import pytest
 
-from feto_parametrico.ecografia import (PLANOS, Adquisicion, Sonda, medir_en_imagen,
-                                        plano_estandar, simular, sonda_para)
+from feto_parametrico.ecografia import (GEOMETRIAS, PLANOS, Adquisicion, Sonda, haz_a_plano,
+                                        medir_en_imagen, plano_a_haz, plano_estandar, simular,
+                                        sonda_para, sonda_tipo)
 from feto_parametrico.feto3d import Escena
 from feto_parametrico.movimiento import Movimiento
 from feto_parametrico.sonda_control import EstadoSonda, errores_planos
@@ -43,6 +44,37 @@ def test_liquido_amniotico_oscuro(escena):
     liq = res["bmodo"][res["etiquetas"] == T["amniotico"]]
     fet = res["bmodo"][res["etiquetas"] == T["fetal"]]
     assert np.median(liq) < 0.25 < np.median(fet)
+
+
+@pytest.mark.parametrize("geometria", GEOMETRIAS)
+def test_geometria_ida_y_vuelta(geometria):
+    s = sonda_tipo(geometria)
+    rng = np.random.default_rng(0)
+    U = rng.uniform(-0.6, 0.6, 50) * (s.ancho_mm if s.es_lineal else 1.0)
+    D = rng.uniform(0, s.profundidad_mm, 50)
+    U2, D2 = plano_a_haz(s, *haz_a_plano(s, U, D))
+    assert np.allclose(U, U2) and np.allclose(D, D2)
+
+
+def test_sonda_lineal_imagen_rectangular():
+    esc = Escena(16)
+    pose = plano_estandar(esc, "transtalamico")
+    s = sonda_para(pose, geometria="lineal", n_lineas=128, dr_mm=0.1)
+    assert s.f0_mhz > 5 and s.profundidad_mm <= 120
+    res = simular(esc, pose, s, Adquisicion(px_salida_mm=0.2), etiquetas="rapidas")
+    assert res["dentro"].mean() > 0.97                     # sin esquinas vacías
+    assert res["xs"][-1] - res["xs"][0] == pytest.approx(s.ancho_mm, abs=0.5)
+    # el cráneo del feto de 16 semanas queda al alcance de la lineal
+    assert (res["etiquetas"] == T["hueso"]).any()
+
+
+def test_tgc_limitada_no_satura_con_ruido(escena):
+    # objetivo profundo con sonda lineal: lo superficial no queda negro bajo ruido amplificado
+    pose = plano_estandar(escena, "femur")
+    res = simular(escena, pose, sonda_para(pose, geometria="lineal", n_lineas=96, dr_mm=0.2),
+                  etiquetas=False)
+    b = res["bmodo"]
+    assert np.median(b[: b.shape[0] // 4]) > np.median(b[-b.shape[0] // 4:])
 
 
 def test_etiquetas_rapidas_coinciden_en_su_mayoria(escena):

@@ -19,8 +19,8 @@ inside a uterus, and a simulator of B-mode obstetric ultrasound for training.
   placenta, umbilical cord and maternal abdominal wall.
 * **Movement**: kicks, startles, head turns, breathing and heartbeat.
 * **Simulated ultrasound** with ground truth: standard planes (transthalamic,
-  four-chamber, abdominal, femur, midsagittal), measurements on the image, cine loops
-  and labelled batches for training.
+  four-chamber, abdominal, femur, midsagittal), convex, linear and sector probes,
+  measurements on the image, cine loops and labelled batches for training.
 * **Desktop applications** (PyQt6 + PyVista), in Spanish and English: a viewer of the
   model and a scanning trainer driven by a virtual or physical probe.
 

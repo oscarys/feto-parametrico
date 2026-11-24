@@ -174,17 +174,22 @@ def agregar_escena(p: pv.Plotter, mallas, recorte=None, render=True):
 # ---------------------------------------------------------------------------
 
 def abanico_3d(pose, sonda, res, sub=2):
-    """StructuredGrid con la forma del sector en el mundo y la imagen como escalar."""
-    th, r = res["th"][::sub], res["r"][::sub * 5]
-    TH, R = np.meshgrid(th, r, indexing="ij")
-    X, Z = R * np.sin(TH), R * np.cos(TH) - sonda.radio_mm
+    """StructuredGrid con la forma de la imagen (sector, trapecio o rectángulo) en el
+    mundo y la imagen como escalar."""
+    from .ecografia import haz_a_plano
+    u, d = res["u"][::sub], res["d"][::sub * 5]
+    U, D = np.meshgrid(u, d, indexing="ij")
+    X, Z = haz_a_plano(sonda, U, D)
     P = pose.a_mundo(X, Z)
     g = pv.StructuredGrid(P[..., 0], P[..., 1], P[..., 2])
-    g["eco"] = res["bmodo_polar"][::sub, ::sub * 5].ravel(order="F")
+    g["eco"] = res["bmodo_haz"][::sub, ::sub * 5].ravel(order="F")
     return g
 
 
-def sonda_3d(pose, largo=55.0):
+def sonda_3d(pose, sonda=None, largo=None):
+    """Caja que representa la sonda; su largo sigue la huella del transductor."""
+    if largo is None:
+        largo = 55.0 if sonda is None else sonda.huella_mm + 10.0
     c = pose.origen - 18 * pose.ez
     return pv.Cube(center=(0, 0, 0), x_length=largo, y_length=14, z_length=36).transform(
         np.block([[np.column_stack([pose.ex, pose.ey, pose.ez]), c[:, None]],

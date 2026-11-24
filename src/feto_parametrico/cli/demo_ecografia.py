@@ -8,6 +8,8 @@ ecografía simulada.
     feto-eco latido   --eg 22   # cine de 4 cámaras (latido) .mp4
     feto-eco combinado --eg 22  # 3D + ecografía con el feto moviéndose
     feto-eco lote --n 32        # imágenes + etiquetas + JSON para entrenamiento
+    feto-eco planos --sonda lineal   # con sonda lineal (o sectorial)
+    feto-eco sondas           # un plano con las tres sondas (16 semanas por omisión)
 
 Licencia: GPL-3.0-or-later
 """
@@ -25,8 +27,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
 
-from ..ecografia import (PLANOS, Adquisicion, medir_en_imagen, plano_estandar, simular,
-                       sonda_para)
+from ..ecografia import (GEOMETRIAS, PLANOS, TIPOS_SONDA, Adquisicion, medir_en_imagen,
+                         plano_estandar, simular, sonda_para)
 from ..feto3d import Escena, Materno, Postura
 from ..movimiento import Movimiento, guion_demostracion
 from ..tejidos import COLORES, TEJIDOS, T
@@ -36,6 +38,8 @@ from ..i18n import N_, agregar_idioma, fijar_idioma, tr
 NOMBRES = {"transtalamico": N_("Transtalámico (CC, DBP)"), "cuatro_camaras": N_("Cuatro cámaras"),
            "abdominal": N_("Abdominal (CA)"), "femur": N_("Fémur (LF)"), "sagital": N_("Sagital medio")}
 # nombre mostrado de cada medida que devuelve medir_en_imagen
+TIPOS = {"convexa": N_("Convexa"), "lineal": N_("Lineal"),
+         "sectorial": N_("Sectorial (phased array)")}
 MEDIDAS = {"CC": N_("CC"), "DBP_ext": N_("DBP"), "DFO": N_("DFO"), "CA": N_("CA"), "LF": N_("LF")}
 
 
@@ -51,7 +55,7 @@ def vista_plano(esc, pose, sonda, res, mallas, tamano=(900, 800), archivo=None, 
     agregar_escena(p, mallas, recorte=((0, 0, 0), (1, 0, 0)))
     p.add_mesh(abanico_3d(pose, sonda, res), scalars="eco", cmap="gray", clim=(0, 1),
                show_scalar_bar=False, name="abanico", lighting=False)
-    p.add_mesh(sonda_3d(pose), color="#3b4252", name="sonda")
+    p.add_mesh(sonda_3d(pose, sonda), color="#3b4252", name="sonda")
     # cámara: mirando el plano de frente, un poco oblicua
     c = pose.origen + 0.55 * sonda.profundidad_mm * pose.ez
     n = pose.ey if pose.ey @ np.array([1, 0, 0.3]) > 0 else -pose.ey
@@ -72,8 +76,9 @@ def superponer_etiquetas(ax, res):
 # Modos
 # ---------------------------------------------------------------------------
 
-def figura_planos(eg=22.0, salida=None, semilla=0):
-    salida = salida or f"planos_estandar_{eg:g}s.png"
+def figura_planos(eg=22.0, salida=None, semilla=0, geometria="convexa"):
+    sufijo = "" if geometria == "convexa" else f"_{geometria}"
+    salida = salida or f"planos_estandar_{eg:g}s{sufijo}.png"
     esc = Escena(eg)
     mallas = mallas_escena(esc, 110)
     fig, ax = plt.subplots(3, len(PLANOS), figsize=(5.2 * len(PLANOS), 14.5),
@@ -81,9 +86,11 @@ def figura_planos(eg=22.0, salida=None, semilla=0):
     medidas = {}
     for j, nom in enumerate(PLANOS):
         pose = plano_estandar(esc, nom)
-        sonda = sonda_para(pose)
-        res = simular(esc, pose, sonda, Adquisicion(elevacion=(-1.0, 0.0, 1.0)), semilla=semilla)
-        med = medir_en_imagen(res, nom, 0.3, pose)
+        sonda = sonda_para(pose, geometria=geometria)
+        px = 0.15 if sonda.es_lineal else 0.3
+        res = simular(esc, pose, sonda, Adquisicion(elevacion=(-1.0, 0.0, 1.0), px_salida_mm=px),
+                      semilla=semilla)
+        med = medir_en_imagen(res, nom, px, pose)
         medidas[nom] = med
         tmp = f"/tmp/_vista_{nom}.png"
         vista_plano(esc, pose, sonda, res, mallas, archivo=tmp).close()
@@ -104,6 +111,36 @@ def figura_planos(eg=22.0, salida=None, semilla=0):
     plt.close(fig)
     print(salida, json.dumps({k: {m: round(v, 1) for m, v in d.items()} for k, d in medidas.items()}))
     return medidas
+
+
+def figura_sondas(eg=16.0, salida=None, plano="transtalamico", semilla=0):
+    """El mismo plano con cada tipo de sonda, a la misma escala."""
+    salida = salida or f"sondas_{eg:g}s.png"
+    esc = Escena(eg)
+    pose = plano_estandar(esc, plano)
+    sondas = [sonda_para(pose, geometria=g) for g in GEOMETRIAS]
+    fondo = max(s.profundidad_mm for s in sondas)
+    anchos = [2 * (s.radio_mm + s.profundidad_mm) * np.sin(np.deg2rad(s.apertura_grados / 2))
+              if not s.es_lineal else s.ancho_mm for s in sondas]
+    fig, ax = plt.subplots(1, len(sondas), figsize=(16, 6.2), facecolor="black",
+                           gridspec_kw={"width_ratios": anchos})
+    for a, s in zip(ax, sondas):
+        px = 0.15 if s.es_lineal else 0.3
+        res = simular(esc, pose, s, Adquisicion(elevacion=(-1.0, 0.0, 1.0), px_salida_mm=px),
+                      semilla=semilla, etiquetas=False)
+        a.imshow(res["bmodo"], cmap="gray", extent=res["extent"], vmin=0, vmax=1)
+        a.set_ylim(fondo, 0)
+        a.set_facecolor("black")
+        a.set_title(f"{tr(TIPOS[s.geometria])}\n{s.f0_mhz:.1f} MHz", color="white", fontsize=13)
+        a.tick_params(colors="0.7", labelsize=8)
+        for lado in a.spines.values():
+            lado.set_color("0.4")
+    fig.suptitle(tr("{eg:g} semanas, plano {plano}: el mismo corte con cada tipo de sonda (mm)",
+                    eg=eg, plano=tr(NOMBRES[plano])), color="white", fontsize=14)
+    plt.tight_layout()
+    plt.savefig(salida, dpi=90, facecolor="black")
+    plt.close(fig)
+    print(salida)
 
 
 def cine_latido(eg=22.0, salida=None, fps=20, duracion=2.0):
@@ -167,7 +204,7 @@ def video_combinado(eg=22.0, salida=None, fps=8, duracion=6.0, plano="sagital"):
     print(salida)
 
 
-def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34)):
+def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34), geometria="convexa"):
     """Imágenes aleatorias (EG, postura, plano, ganancia) con etiquetas y medidas."""
     rng = np.random.default_rng(semilla)
     os.makedirs(carpeta, exist_ok=True)
@@ -184,7 +221,9 @@ def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34)):
             pose = plano_estandar(esc, nom, giro_en_plano=float(rng.uniform(-12, 12)))
         except ValueError:
             continue
-        sonda = sonda_para(pose, f0_mhz=float(rng.uniform(2.5, 5.0)))
+        _, fmin, fmax = TIPOS_SONDA[geometria]["f0"]
+        sonda = sonda_para(pose, geometria=geometria,
+                           f0_mhz=float(rng.uniform(fmin + 0.5, fmax - 1.0)))
         adq = Adquisicion(ganancia_db=float(rng.uniform(-6, 6)),
                           rango_dinamico_db=float(rng.uniform(45, 65)))
         res = simular(esc, pose, sonda, adq, semilla=i)
@@ -194,7 +233,7 @@ def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34)):
         meta.append({"archivo": os.path.basename(base), "plano": nom, "eg": eg,
                      "biometria_hadlock": {k: esc.feto.bio[k] for k in ("DBP", "CC", "CA", "LF")},
                      "medidas_en_imagen": medir_en_imagen(res, nom, adq.px_salida_mm, pose),
-                     "f0_mhz": sonda.f0_mhz, "profundidad_mm": sonda.profundidad_mm,
+                     "sonda": sonda.geometria, "f0_mhz": sonda.f0_mhz, "profundidad_mm": sonda.profundidad_mm,
                      "px_mm": adq.px_salida_mm, "placenta": mat.placenta,
                      "etiquetas": {t.nombre: k + 1 for k, t in enumerate(TEJIDOS)}})
         print(base)
@@ -205,22 +244,30 @@ def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34)):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("modo", choices=["planos", "latido", "combinado", "lote"])
-    ap.add_argument("--eg", type=float, default=22.0)
-    ap.add_argument("--plano", default="sagital", choices=PLANOS)
+    ap.add_argument("modo", choices=["planos", "sondas", "latido", "combinado", "lote"])
+    ap.add_argument("--eg", type=float, default=None,
+                    help=tr("semanas (por omisión 22; 16 en el modo sondas)"))
+    ap.add_argument("--plano", default=None, choices=PLANOS,
+                    help=tr("plano (por omisión sagital; transtalamico en el modo sondas)"))
     ap.add_argument("--n", type=int, default=32)
+    ap.add_argument("--sonda", default="convexa", choices=GEOMETRIAS,
+                    help=tr("tipo de sonda (modos planos y lote)"))
     ap.add_argument("-o", "--salida")
     agregar_idioma(ap)
     a = ap.parse_args(argv)
     fijar_idioma(a.idioma)
+    if a.modo == "sondas":
+        figura_sondas(a.eg or 16.0, a.salida, plano=a.plano or "transtalamico")
+        return
+    eg = a.eg or 22.0
     if a.modo == "planos":
-        figura_planos(a.eg, a.salida)
+        figura_planos(eg, a.salida, geometria=a.sonda)
     elif a.modo == "latido":
-        cine_latido(a.eg, a.salida)
+        cine_latido(eg, a.salida)
     elif a.modo == "combinado":
-        video_combinado(a.eg, a.salida, plano=a.plano)
+        video_combinado(eg, a.salida, plano=a.plano or "sagital")
     else:
-        lote(a.n, a.salida or "lote_eco")
+        lote(a.n, a.salida or "lote_eco", geometria=a.sonda)
 
 
 if __name__ == "__main__":

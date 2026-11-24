@@ -40,7 +40,7 @@ feto-escaner --eg 28 --udp     # with a physical probe or feto-sonda-emulador
 
 * **Left:** top view of the abdomen (drag to move the probe, wheel to rotate it),
   patient settings (GA, placenta, abdominal fat, fetal movement), scanner settings
-  (frequency, depth, gain, dynamic range, label overlay), and a table with the angle and
+  (probe type, frequency, depth, gain, dynamic range, label overlay), and a table with the angle and
   distance from the current plane to each standard plane (green within 10° and 4 mm).
 * **Centre:** 3D scene with the probe and the image painted on its plane.
 * **Right:** live ultrasound (~0.4 s per frame with 128 lines).

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 ecografia.py — Simulador de ecografía modo B (rayos + convolución) sobre la
-escena 3D de feto3d, con una sonda convexa apoyada en el abdomen materno.
+escena 3D de feto3d, con una sonda apoyada en el abdomen materno: convexa,
+lineal o sectorial (phased array).
 
 El núcleo es el simulador 2D anterior (fetal_us_sim/simulator.py); los cambios:
 * la escena se muestrea en el plano de la sonda dentro del volumen 3D;
@@ -9,7 +10,7 @@ El núcleo es el simulador 2D anterior (fetal_us_sim/simulator.py); los cambios:
 * grosor de corte opcional (suma coherente de varios planos en elevación);
 * `plano_estandar` coloca la sonda para los cortes de biometría y anatomía.
 
-Tubería (en coordenadas polares del haz, un rayo por línea):
+Tubería (en coordenadas del haz: línea u y profundidad d a lo largo de ella):
   escena.evaluar -> etiquetas, pieza, coordenadas locales
   tablas         -> impedancia Z, atenuación, amplitud de dispersión
   moteado        -> dispersores complejos anclados al tejido
@@ -18,7 +19,12 @@ Tubería (en coordenadas polares del haz, un rayo por línea):
                     (hueso: sombra acústica; líquido: refuerzo posterior)
   PSF            -> gaussiana axial + lateral dependiente de la profundidad
   receptor       -> ruido, TGC, envolvente, compresión logarítmica
-  conversión     -> imagen sectorial cartesiana + mapa de etiquetas
+  conversión     -> imagen cartesiana (sector, trapecio o rectángulo) + etiquetas
+
+Geometrías de la sonda (`Sonda.geometria`):
+  convexa   líneas en abanico desde un arco de radio `radio_mm`; u = ángulo
+  sectorial igual, con huella casi puntual (`radio_mm` pequeño) y abanico amplio
+  lineal    líneas paralelas repartidas en `ancho_mm`; u = posición lateral
 
 Licencia: GPL-3.0-or-later
 """
@@ -35,11 +41,16 @@ from .feto3d import Escena, _unit
 from .tejidos import T, tablas_propiedades
 
 
+GEOMETRIAS = ("convexa", "lineal", "sectorial")
+
+
 @dataclass
 class Sonda:
     f0_mhz: float = 3.5
-    radio_mm: float = 50.0
-    apertura_grados: float = 70.0
+    geometria: str = "convexa"          # "convexa", "lineal" o "sectorial"
+    radio_mm: float = 50.0              # convexa / sectorial: radio del arco de la huella
+    apertura_grados: float = 70.0       # convexa / sectorial: abanico
+    ancho_mm: float = 40.0              # lineal: ancho de la imagen
     profundidad_mm: float = 170.0
     n_lineas: int = 256
     dr_mm: float = 0.1
@@ -47,6 +58,43 @@ class Sonda:
     sigma_axial_mm: float = 0.25        # a 3.5 MHz; escala como 1/f0
     sigma_lat_foco_mm: float = 0.75
     crecimiento_lat: float = 0.022      # mm de sigma por mm fuera del foco
+    tgc_max_db: float | None = None     # tope de la TGC automática (None: sin tope); con
+                                        # frecuencias altas evita que el ruido amplificado
+                                        # llene lo que está fuera del alcance de la sonda
+
+    @property
+    def es_lineal(self) -> bool:
+        if self.geometria not in GEOMETRIAS:
+            raise ValueError(f"geometría desconocida: {self.geometria}; opciones: {GEOMETRIAS}")
+        return self.geometria == "lineal"
+
+    @property
+    def huella_mm(self) -> float:
+        """Largo de la cara de la sonda que toca la piel."""
+        if self.es_lineal:
+            return self.ancho_mm
+        return max(2 * self.radio_mm * math.sin(math.radians(self.apertura_grados / 2)), 15.0)
+
+
+# Valores típicos de cada tipo de sonda; profundidad: (por omisión, mínima, máxima) en mm,
+# frecuencia: (por omisión, mínima, máxima) en MHz.
+TIPOS_SONDA = {
+    "convexa": dict(sonda=dict(geometria="convexa", radio_mm=50.0, apertura_grados=70.0),
+                    f0=(3.5, 2.0, 6.0), prof=(160, 80, 240)),
+    "lineal": dict(sonda=dict(geometria="lineal", ancho_mm=40.0, tgc_max_db=50.0),
+                   f0=(7.5, 5.0, 12.0), prof=(70, 30, 120)),
+    "sectorial": dict(sonda=dict(geometria="sectorial", radio_mm=1.0, apertura_grados=90.0),
+                      f0=(3.0, 2.0, 5.0), prof=(150, 60, 240)),
+}
+
+
+def sonda_tipo(geometria: str = "convexa", **kw) -> Sonda:
+    """Sonda con los valores típicos de su tipo; `kw` sustituye cualquier campo."""
+    t = TIPOS_SONDA[geometria]
+    base = dict(t["sonda"], f0_mhz=t["f0"][0], profundidad_mm=float(t["prof"][0]),
+                foco_mm=0.5 * t["prof"][0])
+    base.update(kw)
+    return Sonda(**base)
 
 
 @dataclass
@@ -107,31 +155,67 @@ def moteado_anclado(L, pieza, celda, semilla=0):
 
 
 # ---------------------------------------------------------------------------
-# Geometría del sector
+# Geometría del haz: coordenadas (u, d) de cada línea <-> plano de la imagen (X, Z)
 # ---------------------------------------------------------------------------
 
-def malla_polar(s: Sonda):
-    th = np.deg2rad(np.linspace(-s.apertura_grados / 2, s.apertura_grados / 2, s.n_lineas))
-    r = s.radio_mm + np.arange(0.0, s.profundidad_mm, s.dr_mm)
-    TH, R = np.meshgrid(th, r, indexing="ij")
-    return th, r, R * np.sin(TH), R * np.cos(TH) - s.radio_mm
+def lineas(s: Sonda):
+    """Coordenada u de cada línea (rad en convexa/sectorial, mm en lineal) y
+    profundidades d (mm) de las muestras a lo largo de la línea, desde la piel."""
+    if s.es_lineal:
+        u = np.linspace(-s.ancho_mm / 2, s.ancho_mm / 2, s.n_lineas)
+    else:
+        u = np.deg2rad(np.linspace(-s.apertura_grados / 2, s.apertura_grados / 2, s.n_lineas))
+    return u, np.arange(0.0, s.profundidad_mm, s.dr_mm)
+
+
+def haz_a_plano(s: Sonda, U, D):
+    """(u, d) -> (X lateral, Z hacia adentro) en mm, con la piel en Z = 0."""
+    if s.es_lineal:
+        return U + 0.0 * D, D + 0.0 * U
+    R = s.radio_mm + D
+    return R * np.sin(U), R * np.cos(U) - s.radio_mm
+
+
+def plano_a_haz(s: Sonda, X, Z):
+    """Inversa de `haz_a_plano`."""
+    if s.es_lineal:
+        return X, Z
+    return np.arctan2(X, Z + s.radio_mm), np.hypot(X, Z + s.radio_mm) - s.radio_mm
+
+
+def paso_lateral(s: Sonda, u, d):
+    """Distancia (mm) entre líneas vecinas a cada profundidad."""
+    du = u[1] - u[0]
+    if s.es_lineal:
+        return np.full_like(d, du)
+    return np.maximum((s.radio_mm + d) * du, 1e-3)
+
+
+def malla_haz(s: Sonda):
+    u, d = lineas(s)
+    U, D = np.meshgrid(u, d, indexing="ij")
+    X, Z = haz_a_plano(s, U, D)
+    return u, d, X, Z
 
 
 def malla_cartesiana(s: Sonda, px):
-    half = (s.radio_mm + s.profundidad_mm) * np.sin(np.deg2rad(s.apertura_grados / 2))
+    if s.es_lineal:
+        half = s.ancho_mm / 2
+    else:
+        half = (s.radio_mm + s.profundidad_mm) * np.sin(np.deg2rad(s.apertura_grados / 2))
     xs = np.arange(-half, half, px)
     zs = np.arange(0.0, s.profundidad_mm, px)
     Xc, Zc = np.meshgrid(xs, zs)
     return xs, zs, Xc, Zc
 
 
-def conversion(polar, s: Sonda, th, r, Xc, Zc, orden=1, relleno=0.0):
-    Rc = np.hypot(Xc, Zc + s.radio_mm)
-    Tc = np.arctan2(Xc, Zc + s.radio_mm)
-    it = (Tc - th[0]) / (th[1] - th[0])
-    ir = (Rc - r[0]) / (r[1] - r[0])
-    dentro = (it >= 0) & (it <= len(th) - 1) & (ir >= 0) & (ir <= len(r) - 1)
-    out = map_coordinates(polar, [it, ir], order=orden, mode="nearest")
+def conversion(haz, s: Sonda, u, d, Xc, Zc, orden=1, relleno=0.0):
+    """Remuestrea una imagen en coordenadas del haz (líneas x profundidad) al plano."""
+    Uc, Dc = plano_a_haz(s, Xc, Zc)
+    iu = (Uc - u[0]) / (u[1] - u[0])
+    i_d = (Dc - d[0]) / (d[1] - d[0])
+    dentro = (iu >= 0) & (iu <= len(u) - 1) & (i_d >= 0) & (i_d <= len(d) - 1)
+    out = map_coordinates(haz, [iu, i_d], order=orden, mode="nearest")
     return np.where(dentro, out, relleno), dentro
 
 
@@ -148,8 +232,9 @@ def _evaluar_plano(esc, pose, X, Z, elev=0.0):
 
 def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = Adquisicion(),
             semilla: int = 0, etapas: bool = False, etiquetas: bool = True):
-    th, r, X, Z = malla_polar(sonda)
-    dth, dr, f0 = th[1] - th[0], sonda.dr_mm, sonda.f0_mhz
+    u, d, X, Z = malla_haz(sonda)
+    du, dr, f0 = u[1] - u[0], sonda.dr_mm, sonda.f0_mhz
+    lat = paso_lateral(sonda, u, d)             # mm entre líneas vecinas, por profundidad
 
     etq, pieza, loc = _evaluar_plano(esc, pose, X, Z)
     Zlut, alut, slut = tablas_propiedades(esc.osificacion)
@@ -169,7 +254,7 @@ def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = 
     # reflexión especular con dependencia angular
     lnZ = gaussian_filter(np.log(Zmap), sigma=(0.7, 0.15 / dr))
     g_r = np.gradient(lnZ, dr, axis=1)
-    g_t = np.gradient(lnZ, dth, axis=0) / r[None, :]
+    g_t = np.gradient(lnZ, du, axis=0) * du / lat[None, :]
     cosang = np.abs(g_r) / (np.hypot(g_r, g_t) + 1e-9)
     espec = adq.ganancia_especular * 0.5 * g_r * dr * cosang ** adq.potencia_especular
 
@@ -185,13 +270,13 @@ def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = 
     # PSF
     s_ax = sonda.sigma_axial_mm * 3.5 / f0 / dr
     rf = gaussian_filter1d(eco.real, s_ax, axis=1) + 1j * gaussian_filter1d(eco.imag, s_ax, axis=1)
-    prof = r - sonda.radio_mm
-    bordes = np.linspace(0, len(r), 33).astype(int)
+    prof = d
+    bordes = np.linspace(0, len(d), 33).astype(int)
     out = np.empty_like(rf)
     for i0, i1 in zip(bordes[:-1], bordes[1:]):
-        dm = prof[(i0 + i1) // 2]
-        sig = (sonda.sigma_lat_foco_mm + sonda.crecimiento_lat * abs(dm - sonda.foco_mm)) * 3.5 / f0
-        sl = sig / (r[(i0 + i1) // 2] * dth)
+        im = (i0 + i1) // 2
+        sig = (sonda.sigma_lat_foco_mm + sonda.crecimiento_lat * abs(d[im] - sonda.foco_mm)) * 3.5 / f0
+        sl = min(sig / lat[im], float(len(u)))  # junto al vértice de la sectorial: todo un punto
         b = rf[:, i0:i1]
         out[:, i0:i1] = gaussian_filter1d(b.real, sl, axis=0) + 1j * gaussian_filter1d(b.imag, sl, axis=0)
     rf = out
@@ -204,27 +289,30 @@ def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = 
     if adq.tgc_auto:
         # perfil de pérdida típico a cada profundidad (la mediana ignora sombras aisladas);
         # en el líquido amniótico no crece, así que no amplifica el ruido
-        tgc = np.exp(np.median(acum, axis=0))[None, :]
+        tgc_np = np.median(acum, axis=0)
     else:
-        tgc = np.exp(2.0 * adq.tgc_alfa * f0 / 8.686 / 10.0 * prof)[None, :]
+        tgc_np = 2.0 * adq.tgc_alfa * f0 / 8.686 / 10.0 * prof
+    if sonda.tgc_max_db is not None:
+        tgc_np = np.minimum(tgc_np, sonda.tgc_max_db / 8.686)
+    tgc = np.exp(tgc_np)[None, :]
     env = np.abs(rf) * tgc
     ref = np.percentile(env, 99.5)
     db = 20 * np.log10(env / ref + 1e-12) + adq.ganancia_db
-    bmodo_polar = np.clip((db + adq.rango_dinamico_db) / adq.rango_dinamico_db, 0.0, 1.0)
+    bmodo_haz = np.clip((db + adq.rango_dinamico_db) / adq.rango_dinamico_db, 0.0, 1.0)
 
     xs, zs, Xc, Zc = malla_cartesiana(sonda, adq.px_salida_mm)
-    bmodo, dentro = conversion(bmodo_polar, sonda, th, r, Xc, Zc)
+    bmodo, dentro = conversion(bmodo_haz, sonda, u, d, Xc, Zc)
     res = dict(bmodo=bmodo.astype(np.float32), dentro=dentro, xs=xs, zs=zs,
-               bmodo_polar=bmodo_polar.astype(np.float32), th=th, r=r,
+               bmodo_haz=bmodo_haz.astype(np.float32), u=u, d=d,
                extent=(xs[0], xs[-1] + adq.px_salida_mm, zs[-1] + adq.px_salida_mm, zs[0]))
-    if etiquetas == "rapidas":          # vecino más cercano desde la malla polar
-        lab, _ = conversion(etq.astype(float), sonda, th, r, Xc, Zc, orden=0, relleno=-1)
+    if etiquetas == "rapidas":          # vecino más cercano desde la malla del haz
+        lab, _ = conversion(etq.astype(float), sonda, u, d, Xc, Zc, orden=0, relleno=-1)
         res["etiquetas"] = np.where(dentro, lab, -1).astype(np.int16)
     elif etiquetas:
         lab, _, _ = _evaluar_plano(esc, pose, Xc, Zc)
         res["etiquetas"] = np.where(dentro, lab, -1).astype(np.int16)
     if etapas:
-        conv = lambda p: conversion(p, sonda, th, r, Xc, Zc)[0]
+        conv = lambda p: conversion(p, sonda, u, d, Xc, Zc)[0]
         res["etapa_Z"] = conv(Zmap)
         res["etapa_T_db"] = conv(20 * np.log10(Tr + 1e-6))
         res["etapa_disp_db"] = conv(20 * np.log10(np.abs(gaussian_filter1d(np.abs(disp), 1.0, axis=1)) + 1e-3))
@@ -303,11 +391,15 @@ def plano_estandar(esc: Escena, nombre: str, **kw) -> Pose:
     return pose
 
 
-def sonda_para(pose: Pose, margen_mm: float = 65.0, **kw) -> Sonda:
-    """Sonda con la profundidad ajustada a la del objetivo."""
-    prof = pose.info.get("profundidad_objetivo", 100.0) + margen_mm
-    return Sonda(profundidad_mm=float(np.clip(prof, 90.0, 240.0)),
-                 foco_mm=float(pose.info.get("profundidad_objetivo", 80.0)), **kw)
+def sonda_para(pose: Pose, margen_mm: float = 65.0, geometria: str = "convexa", **kw) -> Sonda:
+    """Sonda del tipo dado con la profundidad ajustada a la del objetivo (dentro del
+    intervalo del tipo; una lineal no llega a objetivos profundos)."""
+    objetivo = float(pose.info.get("profundidad_objetivo", 80.0))
+    _, pmin, pmax = TIPOS_SONDA[geometria]["prof"]
+    prof = float(np.clip(objetivo + margen_mm, max(pmin, 90.0 if geometria != "lineal" else pmin), pmax))
+    kw.setdefault("profundidad_mm", prof)
+    kw.setdefault("foco_mm", min(objetivo, prof))
+    return sonda_tipo(geometria, **kw)
 
 
 # ---------------------------------------------------------------------------

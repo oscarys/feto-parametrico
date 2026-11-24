@@ -174,5 +174,13 @@
   "Ángulo": "Angle",
   "Órganos internos": "Internal organs",
   "■ Detener": "■ Stop",
-  "▶ Reproducir 12→40": "▶ Play 12→40"
+  "▶ Reproducir 12→40": "▶ Play 12→40",
+  "Convexa": "Convex",
+  "Lineal": "Linear",
+  "Sectorial (phased array)": "Sector (phased array)",
+  "Tipo de sonda": "Probe type",
+  "tipo de sonda (modos planos y lote)": "probe type (planos and lote modes)",
+  "plano (por omisión sagital; transtalamico en el modo sondas)": "plane (default sagital; transtalamico in sondas mode)",
+  "semanas (por omisión 22; 16 en el modo sondas)": "weeks (default 22; 16 in sondas mode)",
+  "{eg:g} semanas, plano {plano}: el mismo corte con cada tipo de sonda (mm)": "{eg:g} weeks, {plano} plane: the same section with each probe type (mm)"
 }

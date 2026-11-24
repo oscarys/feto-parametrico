@@ -19,8 +19,8 @@ Feto humano paramétrico por edad gestacional, con órganos y movimiento, dentro
   huesos largos; útero, placenta, cordón y pared abdominal materna.
 * **Movimiento**: patadas, sobresaltos, giros de cabeza, respiración y latido.
 * **Ecografía simulada** con máscaras de referencia: planos estándar (transtalámico, cuatro
-  cámaras, abdominal, fémur, sagital), medidas sobre la imagen, cines y lotes
-  etiquetados para entrenamiento.
+  cámaras, abdominal, fémur, sagital), sondas convexa, lineal y sectorial, medidas
+  sobre la imagen, cines y lotes etiquetados para entrenamiento.
 * **Aplicaciones de escritorio** (PyQt6 + PyVista), en español e inglés: un visor del
   modelo y un simulador de exploración con sonda virtual o física.
 

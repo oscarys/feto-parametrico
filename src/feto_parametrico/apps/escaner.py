@@ -38,7 +38,8 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDockWidget, QD
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView)
 from pyvistaqt import QtInteractor
 
-from ..ecografia import (PLANOS, Adquisicion, Sonda, medir_en_imagen, plano_estandar, simular)
+from ..ecografia import (GEOMETRIAS, PLANOS, TIPOS_SONDA, Adquisicion, medir_en_imagen,
+                         plano_estandar, simular, sonda_tipo)
 from ..feto3d import Escena, Materno, Postura
 from ..fuentes_sonda import PUERTO, FuenteUDP
 from ..i18n import N_, tr
@@ -51,6 +52,8 @@ from ..vista3d import (a_pv_lista, abanico_3d, agregar_escena, malla_placenta, m
 
 NOMBRES = {"transtalamico": N_("Transtalámico"), "cuatro_camaras": N_("Cuatro cámaras"),
            "abdominal": N_("Abdominal (CA)"), "femur": N_("Fémur"), "sagital": N_("Sagital medio")}
+TIPOS = {"convexa": N_("Convexa"), "lineal": N_("Lineal"),
+         "sectorial": N_("Sectorial (phased array)")}
 CALIDAD = {"rápida": dict(n_lineas=128, dr_mm=0.2, px=0.5),
            "alta": dict(n_lineas=256, dr_mm=0.1, px=0.3)}
 
@@ -81,10 +84,12 @@ class _Trabajo(QRunnable):
             out["pose"] = pose
             if pose is not None:
                 c = CALIDAD[p["calidad"]]
-                sonda = Sonda(f0_mhz=p["f0"], profundidad_mm=p["prof"], n_lineas=c["n_lineas"],
-                              dr_mm=c["dr_mm"], foco_mm=0.55 * p["prof"])
+                fino = 0.5 if p["geometria"] == "lineal" else 1.0   # campo pequeño, más detalle
+                sonda = sonda_tipo(p["geometria"], f0_mhz=p["f0"], profundidad_mm=p["prof"],
+                                   n_lineas=c["n_lineas"], dr_mm=c["dr_mm"] * fino,
+                                   foco_mm=0.55 * p["prof"])
                 adq = Adquisicion(ganancia_db=p["ganancia"], rango_dinamico_db=p["rd"],
-                                  px_salida_mm=c["px"],
+                                  px_salida_mm=c["px"] * fino,
                                   elevacion=(0.0,))
                 res = simular(esc, pose, sonda, adq,
                               etiquetas=True if p["calidad"] == "alta" else "rapidas")
@@ -226,19 +231,26 @@ class PanelEco(QLabel):
             col = (255 * COLORES[np.clip(lab, 0, None)]).astype(np.uint8)
             m = (lab >= T["fetal"])[..., None]
             rgb = np.where(m, (0.55 * rgb + 0.45 * col).astype(np.uint8), rgb)
+        h, w0, _ = rgb.shape
+        # imagen angosta (sonda lineal): bandas negras a los lados para textos y escala
+        izq = max(0, (int(0.8 * h) - w0) // 2)
+        if izq:
+            rgb = np.pad(rgb, ((0, 0), (izq, izq), (0, 0)))
         rgb = np.ascontiguousarray(rgb)
         h, w, _ = rgb.shape
         img = QImage(rgb.data, w, h, 3 * w, QImage.Format.Format_RGB888).copy()
-        # escala de profundidad cada 2 cm
+        # escala de profundidad cada 2 cm, junto al borde derecho de la imagen
         qp = QPainter(img)
         qp.setPen(QColor("#9fd3ff"))
         px = res["zs"][1] - res["zs"][0]
-        for d in range(0, int(res["zs"][-1]) + 1, 20):
+        borde = izq + w0
+        for d in range(0, int(res["zs"][-1]) + 1, 10 if izq else 20):
             y = int(d / px)
-            qp.drawLine(w - 10, y, w - 2, y)
-            if d and d % 40 == 0:
+            qp.drawLine(borde - 10, y, borde - 2, y)
+            if d and d % (20 if izq else 40) == 0:
                 qp.setFont(QFont("Sans", max(8, w // 70)))
-                qp.drawText(w - int(w * 0.09), y + 4, f"{d // 10} cm")
+                x = borde + 6 if izq else w - int(w * 0.09)
+                qp.drawText(x, y + 4, f"{d // 10} cm")
         fs = max(10, w // 55)
         qp.setFont(QFont("Sans", fs))
         for i, t in enumerate(textos):
@@ -334,6 +346,11 @@ class Escaner(QMainWindow):
         lay.addWidget(caja)
 
         caja = QGroupBox(tr("Equipo")); f = QFormLayout(caja)
+        self.cb_tipo = QComboBox()
+        for g in GEOMETRIAS:
+            self.cb_tipo.addItem(tr(TIPOS[g]), g)
+        self.cb_tipo.currentIndexChanged.connect(self._cambiar_tipo)
+        f.addRow(tr("Tipo de sonda"), self.cb_tipo)
         self.sp_f0 = QDoubleSpinBox(); self.sp_f0.setRange(2.0, 6.0); self.sp_f0.setSingleStep(0.5)
         self.sp_f0.setValue(3.5); self.sp_f0.setSuffix(tr(" MHz"))
         self.sp_prof = QSpinBox(); self.sp_prof.setRange(80, 240); self.sp_prof.setSingleStep(10)
@@ -465,7 +482,8 @@ class Escaner(QMainWindow):
         pedido = dict(eg=self.eg, materno=self.materno, escena=self._escena_actual(),
                       postura=self.movimiento.en(t) if self.ch_mov.isChecked() else Postura(),
                       estado=EstadoSonda(self.estado.x, self.estado.y, self.estado.R.copy()),
-                      calidad=calidad or "rápida", f0=self.sp_f0.value(),
+                      calidad=calidad or "rápida", geometria=self.cb_tipo.currentData(),
+                      f0=self.sp_f0.value(),
                       prof=self.sp_prof.value(), ganancia=self.desl_gan.value(),
                       rd=self.desl_rd.value(), mallas=mallas, medir=medir, t=t)
         self.ocupado = True
@@ -505,7 +523,7 @@ class Escaner(QMainWindow):
         v.add_mesh(abanico_3d(pose, out["sonda"], res, sub=1 if out["pedido"]["calidad"] == "rápida" else 2),
                    scalars="eco", cmap="gray", clim=(0, 1), show_scalar_bar=False,
                    name="abanico", lighting=False, render=False)
-        v.add_mesh(sonda_3d(pose), color="#3b4252", name="sonda", render=False)
+        v.add_mesh(sonda_3d(pose, out["sonda"]), color="#3b4252", name="sonda", render=False)
         v.render()
         self._tabla_errores(out["errores"])
         if "medidas" in out:
@@ -590,10 +608,20 @@ class Escaner(QMainWindow):
             self.statusBar().showMessage(str(e), 5000); return
         self.estado.desde_pose(pose)
         prof = pose.info["profundidad_objetivo"] + 60
-        self.sp_prof.blockSignals(True)
-        self.sp_prof.setValue(int(min(240, max(80, 10 * round(prof / 10)))))
+        self.sp_prof.blockSignals(True)            # setValue se ajusta al intervalo de la sonda
+        self.sp_prof.setValue(int(10 * round(prof / 10)))
         self.sp_prof.blockSignals(False)
         self.mapa.update(); self._pedir()
+
+    def _cambiar_tipo(self, *_):
+        """Frecuencia y profundidad típicas del tipo de sonda elegido."""
+        t = TIPOS_SONDA[self.cb_tipo.currentData()]
+        for sp, (val, lo, hi) in ((self.sp_f0, t["f0"]), (self.sp_prof, t["prof"])):
+            sp.blockSignals(True)
+            sp.setRange(lo, hi)
+            sp.setValue(val)
+            sp.blockSignals(False)
+        self._pedir()
 
     def _congelar(self):
         self.congelado = not self.congelado
@@ -667,6 +695,8 @@ class Escaner(QMainWindow):
             self.ch_udp.setChecked(False)          # libera el puerto para la ventana nueva
         w = Escaner(self.eg, udp)
         w.estado.x, w.estado.y, w.estado.R = self.estado.x, self.estado.y, self.estado.R.copy()
+        w.cb_tipo.setCurrentIndex(self.cb_tipo.currentIndex())
+        w.sp_f0.setValue(self.sp_f0.value())
         w.sp_prof.setValue(self.sp_prof.value())
         w.show()
         w._pedir()

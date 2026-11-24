@@ -39,8 +39,8 @@ feto-escaner --eg 28 --udp     # con sonda física o con feto-sonda-emulador
 
 * **Izquierda:** mapa del abdomen visto desde arriba (arrastrar = mover la sonda,
   rueda = girarla), parámetros de la paciente (EG, placenta, grasa abdominal, feto en
-  movimiento) y del equipo (frecuencia, profundidad, ganancia, rango dinámico,
-  superponer etiquetas), y una tabla con el ángulo y la distancia del plano actual a
+  movimiento) y del equipo (tipo de sonda, frecuencia, profundidad, ganancia, rango
+  dinámico, superponer etiquetas), y una tabla con el ángulo y la distancia del plano actual a
   cada plano estándar (verde dentro de 10° y 4 mm).
 * **Centro:** escena 3D con la sonda y la imagen pintada sobre su plano.
 * **Derecha:** la ecografía en vivo (~0.4 s por cuadro con 128 líneas).
