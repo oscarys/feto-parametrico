@@ -208,8 +208,8 @@ tests fail if a catalog is incomplete or a translation drops a `{field}`.
 **Biometry.** Gestational age sets BPD, HC, AC and FL through the Hadlock et al. (1984)
 regressions. The outer edge of the skull matches Hadlock's HC and BPD (the scalp lies
 outside it); the abdominal cross-section matches the AC; the ossified femoral shaft
-measures exactly FL; foot length follows the published FL/foot ratio (1.0 up to 24
-weeks, 0.85 at term). Proportions not covered by Hadlock are heuristic and editable in
+measures exactly FL; foot length equals FL (FL/foot ratio of 1, see
+[validation](docs/validacion.en.md#foot)). Proportions not covered by Hadlock are heuristic and editable in
 `Proporciones`.
 
 **Geometry.** The body is a smooth union of signed distance functions (ellipsoids and
@@ -300,7 +300,8 @@ reverberation, and illustrative fetal kinematics. It is not a clinical tool.
 * Hadlock FP, Harrist RB, Sharman RS, Deter RL, Park SK. Estimation of fetal weight
   with the use of head, body, and femur measurements. *Am J Obstet Gynecol*
   1985;151:333–337, doi:[10.1016/0002-9378(85)90298-4](https://doi.org/10.1016/0002-9378(85)90298-4).
-* Fetal foot length and femur/foot ratio: *Ultraschall in der Medizin* 2000,
+* Femur/foot ratio: see [validation](docs/validacion.en.md#foot).
+* Fetal foot length (Merz et al.): *Ultraschall in der Medizin* 2000,
   doi:[10.1055/s-2000-12986](https://doi.org/10.1055/s-2000-12986).
 
 ## License

@@ -39,7 +39,7 @@ and is used to check the mesh volume.
 | Face | face, nose and ears as smaller ellipsoids; the head can flex, turn and tilt |
 | Trunk | pelvis, abdomen and thorax along an arched spine; the abdominal cross-section has perimeter AC |
 | Limbs | rounded cones; femur with 0.04·FL of cartilage at each end (the ossified shaft measures FL); tibia, humerus and ulna proportional to FL |
-| Foot | heel to toe = FL / r, with r = 1 up to 24 weeks and 0.85 at term |
+| Foot | heel to toe = FL (FL/foot ratio = 1 throughout gestation) |
 | Surface | smooth union of signed distance functions (SDF) → marching cubes → largest connected component → Taubin smoothing |
 
 ![Fetuses from 12 to 40 weeks at true scale](img/serie_crecimiento_en.png)

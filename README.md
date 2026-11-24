@@ -172,7 +172,8 @@ clínica.
 * Hadlock FP, Harrist RB, Sharman RS, Deter RL, Park SK. Estimation of fetal weight
   with the use of head, body, and femur measurements. *Am J Obstet Gynecol*
   1985;151:333–337, doi:[10.1016/0002-9378(85)90298-4](https://doi.org/10.1016/0002-9378(85)90298-4).
-* Longitud del pie fetal y razón fémur/pie: *Ultraschall in der Medizin* 2000,
+* Razón fémur/pie: ver [validación](docs/validacion.md#pie).
+* Longitud del pie fetal (Merz et al.): *Ultraschall in der Medizin* 2000,
   doi:[10.1055/s-2000-12986](https://doi.org/10.1055/s-2000-12986).
 
 ## Licencia

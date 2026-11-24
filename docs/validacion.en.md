@@ -38,12 +38,20 @@ FL measured on the image is consistently ~5 % long; the cause has not been ident
 
 ## Foot
 
-The FL/foot ratio is 1.0 up to 24 weeks and falls linearly to 0.85 at 40 (test
-`test_razon_femur_pie`), in agreement with:
+The FL/foot ratio is 1 throughout gestation: the foot is as long as Hadlock's FL
+(tests `test_razon_femur_pie` and `test_pie_a_termino_como_recien_nacido`). At 40 weeks
+this gives 77 mm.
 
-* Ultraschall in der Medizin 2000, doi:[10.1055/s-2000-12986](https://doi.org/10.1055/s-2000-12986):
-  mean ratio ~1 up to 24 weeks and 0.85 at term.
-* Joshi et al., *Nepalese Journal of Radiology* (FL/foot ratio of 0.9–1.0 in most cases).
+* Joshi et al., *Nepalese Journal of Radiology*: the FL/foot ratio is fairly constant
+  throughout gestation.
+* Ravisankar et al. 2025, doi:[10.7759/cureus.84515](https://doi.org/10.7759/cureus.84515):
+  ratio between 0.9 and 1 in all cases (17–25 weeks).
+* Term newborn foot length: 77.9 ± 4.2 mm (Kuponiyi and Ogunlesi 2023, doi:[10.4314/gmj.v57i3.11](https://doi.org/10.4314/gmj.v57i3.11)),
+  consistent with 77 mm.
+* Merz et al., *Ultraschall in der Medizin* 2000,
+  doi:[10.1055/s-2000-12986](https://doi.org/10.1055/s-2000-12986), report a ratio of ~1
+  up to 24 weeks falling to 0.85 at 41. With Hadlock's FL that would give a ~91 mm foot at
+  term, longer than a newborn's, so it is not used.
 
 ## Anatomy
 

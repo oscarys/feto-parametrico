@@ -21,10 +21,15 @@ def test_biometria_hadlock(eg, dbp, cc):
     assert b["CC"] / 10 == pytest.approx(cc, abs=0.15)
 
 
-@pytest.mark.parametrize("eg, razon", [(16, 1.0), (24, 1.0), (32, 0.925), (40, 0.85)])
-def test_razon_femur_pie(eg, razon):
+@pytest.mark.parametrize("eg", [16, 24, 32, 40])
+def test_razon_femur_pie(eg):
     lf = biometria(eg)["LF"]
-    assert lf / largo_pie(eg, lf) == pytest.approx(razon, abs=1e-6)
+    assert lf / largo_pie(eg, lf) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_pie_a_termino_como_recien_nacido():
+    # Pie del recién nacido a término: ~73-80 mm (doi:10.4314/gmj.v57i3.11)
+    assert 70 <= largo_pie(40, biometria(40)["LF"]) <= 82
 
 
 def test_pie_del_modelo_3d_mide_lo_esperado():

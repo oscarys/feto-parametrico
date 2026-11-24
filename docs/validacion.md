@@ -38,12 +38,20 @@ La LF medida sale sistemáticamente ~5 % larga; la causa no está identificada t
 
 ## Pie
 
-La razón LF/pie es 1.0 hasta las 24 semanas y baja linealmente a 0.85 a las 40
-(prueba `test_razon_femur_pie`), de acuerdo con:
+La razón LF/pie es 1 en toda la gestación: el pie mide lo mismo que la LF de Hadlock
+(pruebas `test_razon_femur_pie` y `test_pie_a_termino_como_recien_nacido`). A las 40
+semanas da 77 mm.
 
-* Ultraschall in der Medizin 2000, doi:[10.1055/s-2000-12986](https://doi.org/10.1055/s-2000-12986):
-  razón media ~1 hasta las 24 semanas y 0.85 al término.
-* Joshi et al., *Nepalese Journal of Radiology* (razón LF/pie de 0.9–1.0 en la mayoría de los casos).
+* Joshi et al., *Nepalese Journal of Radiology*: la razón LF/pie es bastante constante
+  durante la gestación.
+* Ravisankar et al. 2025, doi:[10.7759/cureus.84515](https://doi.org/10.7759/cureus.84515):
+  razón de 0.9 a 1 en todos los casos (17–25 semanas).
+* Pie del recién nacido a término: 77.9 ± 4.2 mm (Kuponiyi y Ogunlesi 2023, doi:[10.4314/gmj.v57i3.11](https://doi.org/10.4314/gmj.v57i3.11)),
+  coherente con 77 mm.
+* Merz et al., *Ultraschall in der Medizin* 2000,
+  doi:[10.1055/s-2000-12986](https://doi.org/10.1055/s-2000-12986), reportan una razón de
+  ~1 hasta las 24 semanas que baja a 0.85 a las 41. Con la LF de Hadlock eso daría un pie
+  de ~91 mm al término, más largo que el del recién nacido, por lo que no se usa.
 
 ## Anatomía
 

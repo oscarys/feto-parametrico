@@ -37,7 +37,7 @@ CA y LF, y sirve para comprobar el volumen de la malla.
 | Cara | cara, nariz y orejas como elipsoides menores; la cabeza puede flexionarse, girar e inclinarse |
 | Tronco | pelvis, abdomen y tórax a lo largo de una columna en arco; la sección abdominal tiene perímetro CA |
 | Extremidades | conos redondeados; fémur con 0.04·LF de cartílago en cada extremo (la diáfisis osificada mide LF); tibia, húmero y cúbito proporcionales al LF |
-| Pie | talón a punta = LF / r, con r = 1 hasta las 24 semanas y 0.85 al término |
+| Pie | talón a punta = LF (razón LF/pie = 1 en toda la gestación) |
 | Superficie | unión suave de funciones de distancia con signo (SDF) → marching cubes → pieza conexa mayor → suavizado de Taubin |
 
 ![Fetos de 12 a 40 semanas a escala real](img/serie_crecimiento.png)

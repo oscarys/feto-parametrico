@@ -71,11 +71,15 @@ def biometria(eg: float) -> dict:
 
 
 def largo_pie(eg: float, lf: float) -> float:
-    """Longitud del pie (talón a punta, mm). La razón LF/pie es ~1 hasta las
-    24 semanas y baja a ~0.85 al término (Ultraschall Med 2000,
-    doi:10.1055/s-2000-12986)."""
-    razon = 1.0 if eg <= 24 else 1.0 - 0.15 * (min(eg, 40.0) - 24) / 16
-    return lf / razon
+    """Longitud del pie (talón a punta, mm) = LF: razón LF/pie constante de 1.
+
+    La razón se mantiene cerca de 1 durante toda la gestación (Joshi et al.;
+    Ravisankar et al. 2025, doi:10.7759/cureus.84515). Merz et al. (Ultraschall
+    Med 2000, doi:10.1055/s-2000-12986) la reportan bajando a 0.85 al término,
+    pero con la LF de Hadlock eso daría ~91 mm a las 40 semanas, más que el pie
+    del recién nacido a término (~78 mm, doi:10.4314/gmj.v57i3.11). `eg` se
+    conserva en la firma por si se quiere una razón dependiente de la edad."""
+    return lf
 
 
 def semieje_mayor_elipse(perimetro: float, b: float) -> float:
