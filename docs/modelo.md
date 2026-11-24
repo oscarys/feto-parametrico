@@ -37,6 +37,7 @@ CA y LF, y sirve para comprobar el volumen de la malla.
 | Cara | perfil con nariz, labios, mentón, mejillas y párpados (ver [Cara y fosa posterior](#cara-y-fosa-posterior)); la cabeza puede flexionarse, girar e inclinarse |
 | Tronco | pelvis, abdomen y tórax a lo largo de una columna en arco; la sección abdominal tiene perímetro CA |
 | Extremidades | conos redondeados; fémur con 0.04·LF de cartílago en cada extremo (la diáfisis osificada mide LF); tibia, húmero y cúbito proporcionales al LF |
+| Manos y pies | palma con cuatro dedos de tres falanges y pulgar de dos, algo separados, que se cierran con `Postura.puno` (0 abierta, 1 puño); pie con talón, planta y cinco ortejos en abanico (`extremidades.py`, compartido con la escena 3D) |
 | Pie | talón a punta = LF (razón LF/pie = 1 en toda la gestación) |
 | Superficie | unión suave de funciones de distancia con signo (SDF) → marching cubes → pieza conexa mayor → suavizado de Taubin |
 
@@ -53,11 +54,14 @@ extremidades, ángulos de flexión, etc.) son heurísticas y están reunidas en
 Cabeza: calota (grosor según DBP), encéfalo, hoz, ventrículos laterales con plexos
 coroideos, tálamos, cavum del septum pellucidum, cerebelo (hemisferios y vermis),
 cisterna magna, ojos con cristalino, órbitas, hueso nasal, maxilar, paladar y mandíbula.
-Tronco: corazón con 4 cámaras (eje a 40°), pulmones, aorta, hígado, estómago, vena
-umbilical, intestino, riñones y vejiga. Esqueleto: columna (cuerpos y arcos
-vertebrales, colocados a partir de la piel real de la espalda para que queden dentro
-del cuerpo a toda edad), costillas y huesos largos (fémur, tibia, peroné, húmero,
-cúbito, radio).
+Tronco: corazón con 4 cámaras (eje a 40°), pulmones, hígado, estómago, vena
+umbilical, intestino, riñones y vejiga. Grandes vasos: aorta ascendente, arco y aorta
+descendente; tronco de la pulmonar y ductus arterioso, que llegan casi en el mismo plano
+axial (la «V» del plano de tres vasos); vena cava superior y tráquea. Arterias
+umbilicales desde la inserción del cordón, a ambos lados de la vejiga. Esqueleto:
+columna (cuerpos y arcos vertebrales, colocados a partir de la piel real de la espalda
+para que queden dentro del cuerpo a toda edad), costillas, huesos largos (fémur, tibia,
+peroné, húmero, cúbito, radio), metacarpianos, metatarsianos, falanges y calcáneo.
 
 ![Órganos a 22 semanas](img/organos_22s.png)
 
@@ -104,8 +108,8 @@ sobresaltos de brazos, giros de cabeza, episodios de respiración (~0.9 Hz) y la
 
 ## Limitaciones
 
-* Anatomía de primitivas (elipsoides y cápsulas): sin dedos, rasgos faciales
-  esquemáticos, órganos con formas simplificadas.
+* Anatomía de primitivas (elipsoides y cápsulas): rasgos faciales, manos y pies
+  esquemáticos, órganos con formas simplificadas; sin válvulas cardiacas.
 * Fuera de 12–40 semanas las regresiones se extrapolan (el programa lo avisa).
 * Las proporciones heurísticas son un punto de partida razonable, no una referencia
   anatómica.

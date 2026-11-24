@@ -93,6 +93,16 @@ anterior materna:
 | `sagital` | sagital medio del tronco | — |
 | `perfil` | sagital medio de la cara | HN (hueso nasal) |
 | `nariz_labios` | coronal tangente a la cara, por la nariz y el mentón | — (labio superior, narinas) |
+| `tsvi` | por el ventrículo izquierdo y la aorta ascendente | — (tracto de salida izquierdo) |
+| `tsvd` | por el ventrículo derecho y el tronco de la pulmonar | — (tracto de salida derecho) |
+| `tres_vasos` | axial del mediastino superior | — (pulmonar, aorta, cava superior y tráquea) |
+| `vejiga` | axial de la pelvis por la vejiga | — (arterias umbilicales a sus lados) |
+| `mano` | plano de la palma | — (contar dedos) |
+| `pie` | plano de la planta | — (contar ortejos) |
+
+En los planos nuevos del corazón y de los miembros, la sonda gira dentro del plano
+hasta encontrar una ventana acústica (el haz central que cruza menos hueso:
+`pose_con_ventana`), como haría quien explora.
 
 `medir_en_imagen` mide sobre el mapa de etiquetas de la imagen simulada (no sobre el
 modelo), igual que se haría sobre una imagen real anotada.
@@ -102,6 +112,12 @@ modelo), igual que se haría sobre una imagen real anotada.
 Planos de la cabeza y la cara (`feto-eco cabeza`):
 
 ![Transcerebelar, perfil y nariz-labios a 22 semanas](img/planos_cabeza_22s.png)
+
+Corazón (`feto-eco corazon`) y miembros (`feto-eco miembros`):
+
+![Cuatro cámaras, tractos de salida y tres vasos a 24 semanas](img/planos_corazon_24s.png)
+
+![Mano, pie y vejiga con las arterias umbilicales a 24 semanas](img/planos_miembros_24s.png)
 
 | Cine de cuatro cámaras (latido) | Etiquetas superpuestas en `feto-escaner` |
 |---|---|
@@ -124,6 +140,8 @@ res["bmodo"], res["etiquetas"], medir_en_imagen(res, "transtalamico", 0.3, pose)
 ```bash
 feto-eco planos --eg 22        # figura de los planos de biometría con medidas
 feto-eco cabeza --eg 22        # transcerebelar, perfil y nariz-labios (DTC, CM, HN)
+feto-eco corazon --eg 24       # cuatro cámaras, tractos de salida y tres vasos
+feto-eco miembros --eg 24      # mano, pie y vejiga con las arterias umbilicales
 feto-eco latido --eg 22        # cine de 4 cámaras (latido y respiración)
 feto-eco combinado --eg 22     # 3D + ecografía con la sonda fija y el feto moviéndose
 feto-eco lote --n 200          # imágenes, etiquetas y JSON para entrenamiento

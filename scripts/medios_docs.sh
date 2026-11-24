@@ -24,6 +24,8 @@ for L in $LENGUAS; do
     feto-eco sondas -o "sondas_16s$S.png" --idioma "$L"
     feto-eco cabeza --eg 22 -o "planos_cabeza_22s$S.png" --idioma "$L"
     feto-eco volumen -o "volumen_perfil_26s$S.png" --idioma "$L"
+    feto-eco corazon --eg 24 -o "planos_corazon_24s$S.png" --idioma "$L"
+    feto-eco miembros --eg 24 -o "planos_miembros_24s$S.png" --idioma "$L"
     feto-render cara 16 24 32 -o "cara$S.png" --idioma "$L"
     feto-animacion --duracion 6 --fps 12 -o "movimiento_22s$S.mp4" --idioma "$L"
     feto-eco combinado --eg 22 -o "combinado_sagital_22s$S.mp4" --idioma "$L"
@@ -42,7 +44,7 @@ done
 python - <<'PY'
 from pathlib import Path
 from PIL import Image
-anchos = {"planos_estandar_22s": 1800, "sondas_16s": 1440, "planos_cabeza_22s": 1300, "volumen_perfil_26s": 1040, "cara": 1400, "organos_utero_22s": 1200, "organos_22s": 1100,
+anchos = {"planos_estandar_22s": 1800, "sondas_16s": 1440, "planos_cabeza_22s": 1300, "volumen_perfil_26s": 1040, "planos_corazon_24s": 1600, "planos_miembros_24s": 1300, "cara": 1400, "organos_utero_22s": 1200, "organos_22s": 1100,
           "serie_crecimiento": 1600, "biometria_24s": 1100, "vista_previa": 1400,
           "captura_visor": 1500, "captura_escaner": 1600, "captura_escaner_etiquetas": 1600}
 for base, ancho in anchos.items():

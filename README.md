@@ -15,12 +15,14 @@ Feto humano paramétrico por edad gestacional, con órganos y movimiento, dentro
 * **Modelo de superficie** a partir de la biometría de Hadlock (DBP, CC, CA, LF), de 12
   a 40 semanas; mallas herméticas en mm, exportables a STL/OBJ/PLY.
 * **Escena 3D**: cráneo y encéfalo (ventrículos, tálamos, cerebelo con vermis, cisterna
-  magna, CSP), cara con perfil, ojos y huesos faciales, corazón con cuatro cámaras,
+  magna, CSP), cara con perfil, ojos y huesos faciales, manos y pies con dedos,
+  corazón con cuatro cámaras y grandes vasos,
   pulmones, hígado, estómago, riñones, vejiga, columna, costillas y huesos largos;
   útero, placenta, cordón y pared abdominal materna.
 * **Movimiento**: patadas, sobresaltos, giros de cabeza, respiración y latido.
 * **Ecografía simulada** con máscaras de referencia: planos estándar (transtalámico, cuatro
-  cámaras, abdominal, fémur, sagital, transcerebelar, perfil, nariz-labios), sondas
+  cámaras, abdominal, fémur, sagital, transcerebelar, perfil, nariz-labios, tractos de
+  salida, tres vasos, vejiga, mano y pie), sondas
   convexa, lineal, sectorial y matricial (volumen 3D, cortes ortogonales, biplano y
   render de la cara), medidas sobre la imagen, cines y lotes etiquetados para
   entrenamiento.
@@ -99,6 +101,8 @@ Con el entorno virtual activado:
 | `feto-eco planos --eg 22` | figura de los planos estándar de biometría con medidas |
 | `feto-eco cabeza --eg 22` | transcerebelar, perfil y nariz-labios (DTC, CM, hueso nasal) |
 | `feto-eco volumen` | sonda matricial: cortes ortogonales y render 3D de la cara |
+| `feto-eco corazon --eg 24` | cuatro cámaras, tractos de salida y tres vasos |
+| `feto-eco miembros --eg 24` | mano, pie y vejiga con las arterias umbilicales |
 | `feto-eco lote --n 200` | imágenes, etiquetas y JSON con biometría para entrenamiento |
 | `feto-render serie 12 20 28 36 40` | fetos a escala sobre una regla |
 | `feto-animacion --eg 22` | video 3D del feto moviéndose en el útero |

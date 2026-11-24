@@ -31,7 +31,7 @@ from .superficie import (EG_MAX, EG_MIN, Proporciones, _marco, _unit, biometria,
                               sdf_cono_redondeado, sdf_elipsoide,
                               recortar, resta_suave, semieje_mayor_elipse, semiejes_por_perimetro,
                          union_suave)
-from . import cabeza
+from . import cabeza, extremidades
 from .tejidos import T, osificacion
 
 GRANDE = 1e5      # "infinito" finito para la unión suave con piezas descartadas
@@ -54,6 +54,7 @@ class Postura:
     hombro: tuple = (30.0, 30.0)    # brazo: ángulo desde "abajo" hacia anterior
     abd_brazo: tuple = (0.05, 0.05)
     codo: tuple = (70.0, 70.0)      # flexión de codo (manos frente al pecho, cara libre)
+    puno: tuple = (0.15, 0.15)      # 0 = mano abierta, 1 = puño
     resp: float = 0.0               # movimiento respiratorio, -1..1
     fase_card: float = 0.0          # fase del ciclo cardiaco, 0..1
     giro_global: float = 0.0        # giro del feto sobre su eje longitudinal
@@ -316,6 +317,39 @@ def construir_feto(eg: float, post: Postura | None = None,
     organos.append(Prim("vena_umbilical", "cono", T["sangre"], a=ins_cordon - 0.05 * a_abd * n_ins,
                         b=h_c + 0.25 * a_abd * Rt[:, 0], ra=0.06 * a_abd, rb=0.05 * a_abd))
 
+    # Grandes vasos: aorta ascendente y arco, tronco de la pulmonar y ductus, vena cava
+    # superior y tráquea. En el plano de tres vasos y tráquea quedan, de izquierda a
+    # derecha y de adelante hacia atrás: pulmonar, aorta, cava superior; la tráquea detrás.
+    def PT(s_, x, y):
+        """Punto del tronco a la altura s_: x en a_abd (anterior +), y en b_abd (izquierda +)."""
+        p_, R_ = marco_tronco(s_)
+        return p_ + x * a_abd * R_[:, 0] + y * b_abd * Y
+
+    def tubo(nombre, puntos, r, etq=T["sangre"]):
+        return [Prim(f"{nombre}{j}", "cono", etq, a=puntos[j], b=puntos[j + 1], ra=r, rb=r)
+                for j in range(len(puntos) - 1)]
+
+    raiz_ao = c_cor + r_c * (0.05 * xc + 0.10 * yc + 0.45 * zc)
+    raiz_ap = c_cor + r_c * (0.30 * xc - 0.15 * yc + 0.50 * zc)
+    # arco y ductus casi en el mismo plano axial: forman la «V» del plano de tres vasos
+    aorta_ao = [raiz_ao, PT(0.80, 0.02, -0.03), PT(0.83, -0.05, 0.00), PT(0.83, -0.35, 0.05),
+                PT(0.81, -0.50, 0.04), p2 - 0.50 * a_abd * n2]
+    pulmonar = [raiz_ap, PT(0.80, 0.15, 0.10), PT(0.825, 0.0, 0.16), PT(0.825, -0.35, 0.11),
+                PT(0.81, -0.50, 0.05)]
+    cava = [PT(0.93, -0.12, -0.17), PT(0.82, -0.12, -0.17),
+            c_cor + r_c * (-0.38 * xc - 0.32 * yc + 0.10 * zc)]
+    organos += (tubo("aorta_asc", aorta_ao, 0.065 * a_abd)
+                + tubo("pulmonar", pulmonar, 0.075 * a_abd)
+                + tubo("vena_cava_sup", cava, 0.05 * a_abd)
+                + tubo("traquea", [PT(0.98, -0.30, -0.06), PT(0.78, -0.30, -0.06)],
+                       0.055 * a_abd, T["liquido"]))
+    # arterias umbilicales: de la inserción del cordón a los lados de la vejiga
+    for lado in (+1, -1):
+        organos += tubo(f"arteria_umbilical{lado:+d}_",
+                        [ins_cordon - 0.08 * a_abd * n_ins, PT(0.24, 0.62, 0.12 * lado),
+                         PT(0.17, 0.28, 0.30 * lado), PT(0.10, -0.15, 0.36 * lado)],
+                        0.035 * a_abd)
+
     # Columna: cuerpos vertebrales y arcos posteriores. La profundidad se toma
     # de la piel real de la espalda (la superficie es una unión suave de
     # pelvis, abdomen y tórax, que no sigue exactamente el arco de la columna).
@@ -375,7 +409,13 @@ def construir_feto(eg: float, post: Postura | None = None,
     p_pel, t_pel, n_pel = columna(0.17)
     p_tor, t_tor, n_tor = columna(0.82)
     abajo = -t_pel
-    femures, humeros = [], []
+    femures, humeros, manos, pies = [], [], [], []
+
+    def desde_extremidad(e, etq=None):
+        if e["tipo"] == "cono":
+            return Prim(e["nombre"], "cono", etq, k=e["k"], a=e["a"], b=e["b"], ra=e["ra"], rb=e["rb"])
+        return Prim(e["nombre"], "elip", etq, k=e["k"], centro=e["centro"], semiejes=e["semiejes"],
+                    R=e["R"])
 
     def hueso_largo(nombre, a, b, r, recorte):
         d = _unit(b - a); l = np.linalg.norm(b - a)
@@ -396,10 +436,15 @@ def construir_feto(eg: float, post: Postura | None = None,
         piezas += [
             Prim(f"muslo_{sfx}", "cono", k=0.35 * r_mus, a=cadera, b=rodilla, ra=r_mus, rb=0.62 * r_mus),
             Prim(f"pierna_{sfx}", "cono", k=0.2 * r_mus, a=rodilla, b=tobillo, ra=0.62 * r_mus, rb=0.36 * r_mus),
-            # largo total (casquetes incluidos) = lp, de talón a punta
-            Prim(f"pie_{sfx}", "cono", k=0.15 * r_mus, a=tobillo + (0.36 * r_mus - 0.20 * lp) * d_pie,
-                 b=tobillo + (0.80 * lp - 0.30 * r_mus) * d_pie, ra=0.36 * r_mus, rb=0.30 * r_mus),
         ]
+        # pie con cinco ortejos; del talón a la punta del primero mide lp
+        e1, e2, e3 = extremidades.marco_ortonormal(d_pie, -d_tib)
+        if e2 @ (-lado * Y) < 0:                         # e2 hacia el lado medial
+            e2 = -e2
+        p_ = extremidades.pie(sfx, tobillo - 0.20 * lp * e1, e1, e2, e3, lp, 0.36 * r_mus)
+        piezas += [desde_extremidad(e) for e in p_["piel"]]
+        organos += [desde_extremidad(e, T["hueso"]) for e in p_["huesos"]]
+        pies.append((p_["talon"], p_["punta"], p_["planta"], e3))
         # el fémur va de cadera a rodilla: su longitud osificada es ~LF
         rf_ = 0.05 * lf      # la diáfisis osificada mide exactamente LF (incluye los casquetes)
         organos.append(Prim(f"femur_{sfx}", "cono", T["hueso"],
@@ -423,9 +468,15 @@ def construir_feto(eg: float, post: Postura | None = None,
         piezas += [
             Prim(f"brazo_{sfx}", "cono", k=0.35 * r_bra, a=hombro, b=codo, ra=r_bra, rb=0.68 * r_bra),
             Prim(f"antebrazo_{sfx}", "cono", k=0.2 * r_bra, a=codo, b=muneca, ra=0.68 * r_bra, rb=0.50 * r_bra),
-            Prim(f"mano_{sfx}", "elip", k=0.12 * r_bra, centro=muneca + 0.45 * lm * d_cub,
-                 semiejes=(0.22 * lm, 0.38 * lm, 0.50 * lm), R=_marco(n_tor, d_cub)),
         ]
+        # mano con cinco dedos: dorso hacia adelante, pulgar hacia la cabeza
+        e1, e2, e3 = extremidades.marco_ortonormal(d_cub, n_tor)
+        if e2 @ t_tor < 0:
+            e2 = -e2
+        m_ = extremidades.mano(sfx, muneca, e1, e2, e3, lm, post.puno[i])
+        piezas += [desde_extremidad(e) for e in m_["piel"]]
+        organos += [desde_extremidad(e, T["hueso"]) for e in m_["huesos"]]
+        manos.append((m_["palma"], e3))
         perp = _unit(np.cross(d_cub, d_hum)) if abs(d_cub @ d_hum) < 0.99 else Y
         organos += [hueso_largo(f"humero_{sfx}", hombro, codo, 0.045 * lf, 0.04),
                     hueso_largo(f"cubito_{sfx}", codo + 0.22 * r_bra * perp,
@@ -460,6 +511,14 @@ def construir_feto(eg: float, post: Postura | None = None,
         "columna": marco_tronco(0.55),
         "femures": femures,
         "humeros": humeros,
+        "manos": manos,
+        "tres_vasos": marco_tronco(0.825),
+        # tractos de salida: el plano contiene el eje del tracto y es el más cercano al axial
+        # (como inclinar el corte de cuatro cámaras hacia la cabeza)
+        "tsvi": plano_por_eje(por_nombre["vi"].centro, aorta_ao[1], Rt[:, 2]),
+        "tsvd": plano_por_eje(por_nombre["vd"].centro, pulmonar[1], Rt[:, 2]),
+        "vejiga": (por_nombre["vejiga"].centro, marco_tronco(0.17)[1]),                    # (centro de la palma, normal dorsal)
+        "pies": pies,                      # (talón, punta del primer ortejo, planta, dorsal)
         "insercion_cordon": (ins_cordon, n_ins),
     }
     bio = dict(bio, **geo_cab["medidas"], OFD=2 * a_cab, a_abd=a_abd, b_abd=b_abd, L_tronco=L,
@@ -664,6 +723,14 @@ class Escena:
     def con_postura(self, post: Postura) -> "Escena":
         """Misma madre/útero, otra postura del feto (el cordón se recalcula)."""
         return Escena(self.eg, post, self.prop, self.mat)
+
+
+def plano_por_eje(a, b, normal_cercana):
+    """(centro, normal) del plano que contiene el segmento a-b y cuya normal es la más
+    parecida a normal_cercana."""
+    eje = _unit(np.asarray(b) - np.asarray(a))
+    n = np.asarray(normal_cercana, float)
+    return 0.5 * (np.asarray(a) + np.asarray(b)), _unit(n - (n @ eje) * eje)
 
 
 def sdf_piel(piezas, P):

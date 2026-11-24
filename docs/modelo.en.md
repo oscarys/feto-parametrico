@@ -39,6 +39,7 @@ and is used to check the mesh volume.
 | Face | profile with nose, lips, chin, cheeks and eyelids (see [Face and posterior fossa](#face-and-posterior-fossa)); the head can flex, turn and tilt |
 | Trunk | pelvis, abdomen and thorax along an arched spine; the abdominal cross-section has perimeter AC |
 | Limbs | rounded cones; femur with 0.04·FL of cartilage at each end (the ossified shaft measures FL); tibia, humerus and ulna proportional to FL |
+| Hands and feet | palm with four slightly spread three-phalanx fingers and a two-phalanx thumb, closed with `Postura.puno` (0 open, 1 fist); foot with heel, sole and five fanned toes (`extremidades.py`, shared with the 3D scene) |
 | Foot | heel to toe = FL (FL/foot ratio = 1 throughout gestation) |
 | Surface | smooth union of signed distance functions (SDF) → marching cubes → largest connected component → Taubin smoothing |
 
@@ -54,10 +55,14 @@ are heuristic and gathered in `Proporciones` so they can be edited.
 Head: calvarium (thickness from BPD), brain, falx, lateral ventricles with choroid
 plexuses, thalami, cavum septi pellucidi, cerebellum (hemispheres and vermis), cisterna
 magna, eyes with lens, orbits, nasal bone, maxilla, palate and mandible. Trunk:
-four-chamber heart (axis at 40°), lungs, aorta, liver, stomach, umbilical vein, bowel,
-kidneys and bladder. Skeleton: spine (vertebral bodies and arches, placed from the actual
-skin of the back so they stay inside the body at every age), ribs and long bones (femur,
-tibia, fibula, humerus, ulna, radius).
+four-chamber heart (axis at 40°), lungs, liver, stomach, umbilical vein, bowel, kidneys
+and bladder. Great vessels: ascending aorta, arch and descending aorta; pulmonary trunk
+and ductus arteriosus, reaching almost the same axial plane (the "V" of the
+three-vessel view); superior vena cava and trachea. Umbilical arteries from the cord
+insertion, on both sides of the bladder. Skeleton: spine (vertebral bodies and arches,
+placed from the actual skin of the back so they stay inside the body at every age),
+ribs, long bones (femur, tibia, fibula, humerus, ulna, radius), metacarpals,
+metatarsals, phalanges and calcaneus.
 
 ![Organs at 22 weeks](img/organos_22s.png)
 
@@ -105,8 +110,8 @@ kinematics.
 
 ## Limitations
 
-* Primitive-based anatomy (ellipsoids and capsules): no fingers, schematic facial
-  features, simplified organ shapes.
+* Primitive-based anatomy (ellipsoids and capsules): schematic face, hands and feet,
+  simplified organ shapes; no heart valves.
 * Outside 12–40 weeks the regressions are extrapolated (the program warns).
 * The heuristic proportions are a reasonable starting point, not an anatomical reference.
 

@@ -56,7 +56,10 @@ from ..vista3d import (a_pv_lista, abanico_3d, agregar_escena, malla_placenta, m
 NOMBRES = {"transtalamico": N_("Transtalámico"), "transcerebelar": N_("Transcerebelar"),
            "cuatro_camaras": N_("Cuatro cámaras"), "abdominal": N_("Abdominal (CA)"),
            "femur": N_("Fémur"), "sagital": N_("Sagital medio"), "perfil": N_("Perfil"),
-           "nariz_labios": N_("Nariz y labios")}
+           "nariz_labios": N_("Nariz y labios"), "tsvi": N_("Tracto de salida del VI"),
+           "tsvd": N_("Tracto de salida del VD"), "tres_vasos": N_("Tres vasos y tráquea"),
+           "vejiga": N_("Vejiga y arterias umbilicales"), "mano": N_("Mano"),
+           "pie": N_("Pie (planta)")}
 # medida -> (nombre mostrado, clave en Feto.bio, fuente del valor esperado)
 MEDIDAS = {"CC": (N_("CC"), "CC", "Hadlock"), "DBP_ext": (N_("DBP"), "DBP", "Hadlock"),
            "CA": (N_("CA"), "CA", "Hadlock"), "LF": (N_("LF"), "LF", "Hadlock"),

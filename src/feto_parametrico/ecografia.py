@@ -375,10 +375,34 @@ def pose_hacia(esc: Escena, centro, normal, giro_en_plano=0.0):
                 {"profundidad_objetivo": s, "centro": np.asarray(centro, float), "normal": n})
 
 
+def pose_con_ventana(esc: Escena, centro, normal, angulos=range(-50, 51, 10), **kw):
+    """Como pose_hacia, pero gira el haz dentro del plano hasta encontrar una ventana
+    acústica: el giro cuyo haz central cruza menos hueso antes de llegar al objetivo
+    (a igualdad, el más cercano a 0°)."""
+    mejor = None
+    for g in sorted(angulos, key=abs):
+        try:
+            pose = pose_hacia(esc, centro, normal, giro_en_plano=float(g), **kw)
+        except ValueError:
+            continue
+        t = np.linspace(0.0, 0.92, 120)[:, None]
+        etq, _, _ = esc.evaluar(pose.origen + t * (np.asarray(centro) - pose.origen))
+        hueso = int(np.sum(etq == T["hueso"]))
+        if mejor is None or hueso < mejor[0]:
+            mejor = (hueso, pose)
+        if hueso == 0:
+            break
+    if mejor is None:
+        raise ValueError("no hay ventana acústica hacia el objetivo")
+    return mejor[1]
+
+
 PLANOS = ("transtalamico", "transcerebelar", "cuatro_camaras", "abdominal", "femur", "sagital",
-          "perfil", "nariz_labios")
+          "perfil", "nariz_labios", "tsvi", "tsvd", "tres_vasos", "vejiga", "mano", "pie")
 PLANOS_BIOMETRIA = PLANOS[:6]
 PLANOS_CARA = ("perfil", "nariz_labios")
+PLANOS_CORAZON = ("cuatro_camaras", "tsvi", "tsvd", "tres_vasos")
+PLANOS_MIEMBROS = ("mano", "pie", "vejiga")
 
 
 def plano_estandar(esc: Escena, nombre: str, **kw) -> Pose:
@@ -400,6 +424,22 @@ def plano_estandar(esc: Escena, nombre: str, **kw) -> Pose:
     elif nombre == "nariz_labios":
         c, n = f.marcos["nariz_labios"]
         pose = pose_hacia(esc, esc.a_mundo(c), Rg @ n, **kw)
+    elif nombre in ("tsvi", "tsvd"):
+        # tractos de salida: del ventrículo al primer tramo de la aorta o de la pulmonar
+        c, n = f.marcos[nombre]
+        pose = pose_con_ventana(esc, esc.a_mundo(c), Rg @ n, **kw)
+    elif nombre == "tres_vasos":
+        c, R = f.marcos["tres_vasos"]
+        pose = pose_con_ventana(esc, esc.a_mundo(c - 0.15 * f.bio["a_abd"] * R[:, 0]),
+                                Rg @ R[:, 2], **kw)
+    elif nombre == "vejiga":
+        c, R = f.marcos["vejiga"]
+        pose = pose_hacia(esc, esc.a_mundo(c), Rg @ R[:, 2], **kw)
+    elif nombre in ("mano", "pie"):
+        # la mano o el pie más cercano a la pared anterior materna, en su propio plano
+        lista = f.marcos["manos"] if nombre == "mano" else [(pl, n) for _, _, pl, n in f.marcos["pies"]]
+        c, n = max(lista, key=lambda cn: esc.a_mundo(cn[0])[2])
+        pose = pose_con_ventana(esc, esc.a_mundo(c), Rg @ n, **kw)
     elif nombre == "cuatro_camaras":
         c, R = f.marcos["corazon"]
         pose = pose_hacia(esc, esc.a_mundo(c), Rg @ R[:, 2], **kw)

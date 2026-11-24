@@ -57,7 +57,6 @@
   "Escala real (cámara fija)": "True scale (fixed camera)",
   "Escuchando en el puerto {puerto}…": "Listening on port {puerto}…",
   "Estómago": "Stomach",
-  "Estómago y vejiga": "Stomach and bladder",
   "Exportar malla": "Export mesh",
   "Exportar malla…": "Export mesh…",
   "Feto en movimiento (M)": "Fetus moving (M)",
@@ -216,5 +215,19 @@
   "plano (por omisión sagital; transtalamico en sondas, perfil en volumen)": "plane (default sagital; transtalamico in sondas, perfil in volumen)",
   "semanas (por omisión 22; 16 en el modo sondas, 26 en volumen)": "weeks (default 22; 16 in sondas mode, 26 in volumen)",
   "{eg:g} semanas, sonda matricial: {n} planos en {ap:g}° de elevación (mm)": "{eg:g} weeks, matrix probe: {n} planes over {ap:g}° of elevation (mm)",
-  "{n} planos en {ap:g}° de elevación; vóxel de {vx:.1f} mm": "{n} planes over {ap:g}° of elevation; {vx:.1f} mm voxel"
+  "{n} planos en {ap:g}° de elevación; vóxel de {vx:.1f} mm": "{n} planes over {ap:g}° of elevation; {vx:.1f} mm voxel",
+  "Arco aórtico": "Aortic arch",
+  "Arteria pulmonar": "Pulmonary artery",
+  "Arteria umbilical": "Umbilical artery",
+  "Estómago, vejiga y tráquea": "Stomach, bladder and trachea",
+  "Mano": "Hand",
+  "Pie": "Foot",
+  "Pie (planta)": "Foot (sole)",
+  "Tracto de salida del VD": "RV outflow tract",
+  "Tracto de salida del VI": "LV outflow tract",
+  "Tres vasos y tráquea": "Three vessels and trachea",
+  "Tráquea": "Trachea",
+  "Vejiga y arterias umbilicales": "Bladder and umbilical arteries",
+  "Vena cava superior": "Superior vena cava",
+  "{eg:g} semanas   |   fila 2: ecografía simulada; fila 3: etiquetas (máscaras de referencia)": "{eg:g} weeks   |   row 2: simulated ultrasound; row 3: labels (ground truth)"
 }

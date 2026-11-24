@@ -122,7 +122,7 @@ LEYENDA = {"calota": N_("Calota"), "hueso": N_("Huesos"), "cerebro": N_("Encéfa
            "lcr": N_("LCR (ventrículos, CSP, cisterna)"), "coroides": N_("Plexos coroideos"),
            "talamo": N_("Tálamos"), "cerebelo": N_("Cerebelo"), "vermis": N_("Vermis"), "vitreo": N_("Ojos"), "cristalino": N_("Cristalino"),
            "miocardio": N_("Corazón (miocardio)"), "sangre": N_("Sangre (cámaras, vasos)"),
-           "pulmon": N_("Pulmones"), "higado": N_("Hígado"), "liquido": N_("Estómago y vejiga"),
+           "pulmon": N_("Pulmones"), "higado": N_("Hígado"), "liquido": N_("Estómago, vejiga y tráquea"),
            "rinon": N_("Riñones"), "intestino": N_("Intestino")}
 
 # órgano -> (nombre mostrado, punto de anclaje en coordenadas locales relativas a los semiejes)
@@ -136,7 +136,11 @@ ROTULOS = {"calota": (N_("Calota"), (0.0, 0.0, 1.0)), "encefalo": (N_("Encéfalo
            "costilla3+12": (N_("Costilla"), None), "femur_i": (N_("Fémur"), None), "tibia_i": (N_("Tibia"), None),
            "humero_i": (N_("Húmero"), None), "cubito_i": (N_("Cúbito"), None),
            "cisterna_magna": (N_("Cisterna magna"), None), "hueso_nasal": (N_("Hueso nasal"), None),
-           "mandibula4": (N_("Mandíbula"), None), "cristalino_i": (N_("Cristalino"), None)}
+           "mandibula4": (N_("Mandíbula"), None), "cristalino_i": (N_("Cristalino"), None),
+           "aorta_asc2": (N_("Arco aórtico"), None), "pulmonar1": (N_("Arteria pulmonar"), None),
+           "vena_cava_sup0": (N_("Vena cava superior"), None), "traquea0": (N_("Tráquea"), None),
+           "arteria_umbilical+1_1": (N_("Arteria umbilical"), None),
+           "metacarpiano3_i": (N_("Mano"), None), "calcaneo_i": (N_("Pie"), None)}
 
 
 def organos_cuerpo(eg: float) -> dict:

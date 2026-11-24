@@ -15,12 +15,14 @@ inside a uterus, and a simulator of B-mode obstetric ultrasound for training.
 * **Surface model** from Hadlock biometry (BPD, HC, AC, FL), 12 to 40 weeks;
   watertight meshes in millimetres, exportable to STL/OBJ/PLY.
 * **3D scene**: skull and brain (ventricles, thalami, cerebellum with vermis, cisterna
-  magna, CSP), face with profile, eyes and facial bones, four-chamber heart, lungs,
+  magna, CSP), face with profile, eyes and facial bones, hands and feet with digits,
+  four-chamber heart with great vessels, lungs,
   liver, stomach, kidneys, bladder, spine, ribs and long bones; uterus, placenta,
   umbilical cord and maternal abdominal wall.
 * **Movement**: kicks, startles, head turns, breathing and heartbeat.
 * **Simulated ultrasound** with ground truth: standard planes (transthalamic,
-  four-chamber, abdominal, femur, midsagittal, transcerebellar, profile, nose-and-lips),
+  four-chamber, abdominal, femur, midsagittal, transcerebellar, profile, nose-and-lips,
+  outflow tracts, three vessels, bladder, hand and foot),
   convex, linear, sector and matrix probes (3D volume, orthogonal slices, biplane and
   face render), measurements on the image, cine loops and labelled batches for
   training.
@@ -101,6 +103,8 @@ With the virtual environment activated:
 | `feto-eco planos --eg 22` | figure of the standard biometry planes with measurements |
 | `feto-eco cabeza --eg 22` | transcerebellar, profile and nose-and-lips (TCD, CM, nasal bone) |
 | `feto-eco volumen` | matrix probe: orthogonal slices and 3D render of the face |
+| `feto-eco corazon --eg 24` | four-chamber, outflow tracts and three vessels |
+| `feto-eco miembros --eg 24` | hand, foot and bladder with the umbilical arteries |
 | `feto-eco lote --n 200` | images, label maps and JSON with biometry for training |
 | `feto-render serie 12 20 28 36 40` | fetuses to scale over a ruler |
 | `feto-animacion --eg 22` | 3D video of the fetus moving in the uterus |

@@ -93,6 +93,16 @@ maternal wall:
 | `sagital` | midsagittal plane of the trunk | — |
 | `perfil` (profile) | midsagittal plane of the face | NBL (nasal bone) |
 | `nariz_labios` (nose and lips) | coronal plane tangent to the face, through the nose and chin | — (upper lip, nostrils) |
+| `tsvi` (LVOT) | through the left ventricle and the ascending aorta | — (left outflow tract) |
+| `tsvd` (RVOT) | through the right ventricle and the pulmonary trunk | — (right outflow tract) |
+| `tres_vasos` (three vessels) | axial plane of the upper mediastinum | — (pulmonary artery, aorta, SVC and trachea) |
+| `vejiga` (bladder) | axial plane of the pelvis through the bladder | — (umbilical arteries beside it) |
+| `mano` (hand) | plane of the palm | — (count fingers) |
+| `pie` (foot) | plane of the sole | — (count toes) |
+
+In the new heart and limb planes the probe turns within the plane until it finds an
+acoustic window (the central beam crossing the least bone: `pose_con_ventana`), as a
+sonographer would.
 
 `medir_en_imagen` (measure on image) measures on the label map of the simulated image,
 not on the model, just as one would on an annotated real image. It returns Spanish keys:
@@ -104,6 +114,12 @@ not on the model, just as one would on an annotated real image. It returns Spani
 Head and face planes (`feto-eco cabeza`):
 
 ![Transcerebellar, profile and nose-and-lips planes at 22 weeks](img/planos_cabeza_22s_en.png)
+
+Heart (`feto-eco corazon`) and limbs (`feto-eco miembros`):
+
+![Four-chamber, outflow tracts and three-vessel planes at 24 weeks](img/planos_corazon_24s_en.png)
+
+![Hand, foot and bladder with the umbilical arteries at 24 weeks](img/planos_miembros_24s_en.png)
 
 | Four-chamber cine (heartbeat) | Label overlay in `feto-escaner` |
 |---|---|
@@ -126,6 +142,8 @@ res["bmodo"], res["etiquetas"], medir_en_imagen(res, "transtalamico", 0.3, pose)
 ```bash
 feto-eco planos --eg 22        # figure of the biometry planes with measurements
 feto-eco cabeza --eg 22        # transcerebellar, profile and nose-and-lips (TCD, CM, NBL)
+feto-eco corazon --eg 24       # four-chamber, outflow tracts and three vessels
+feto-eco miembros --eg 24      # hand, foot and bladder with the umbilical arteries
 feto-eco latido --eg 22        # four-chamber cine (heartbeat and breathing)
 feto-eco combinado --eg 22     # 3D + ultrasound with a fixed probe and a moving fetus
 feto-eco lote --n 200          # images, label maps and JSON for training

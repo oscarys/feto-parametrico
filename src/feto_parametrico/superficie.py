@@ -48,7 +48,7 @@ import numpy as np
 import trimesh
 from skimage.measure import marching_cubes
 
-from . import cabeza
+from . import cabeza, extremidades
 
 EG_MIN, EG_MAX = 12.0, 40.0   # intervalo de validez de las regresiones
 
@@ -345,12 +345,13 @@ def construir_piezas(eg: float, prop: Proporciones | None = None):
                   k=0.35 * r_mus),
             Pieza(f"pierna_{suf}", "cono", dict(a=rodilla, b=tobillo, ra=0.62 * r_mus,
                                                  rb=0.36 * r_mus), k=0.2 * r_mus),
-            # el largo total, casquetes incluidos, es lpie (talón a punta)
-            Pieza(f"pie_{suf}", "cono", dict(
-                a=tobillo + (0.36 * r_mus - 0.20 * lpie) * d_pie,
-                b=tobillo + (0.80 * lpie - 0.30 * r_mus) * d_pie,
-                ra=0.36 * r_mus, rb=0.30 * r_mus), k=0.15 * r_mus),
         ]
+        # pie con cinco ortejos (como feto3d); talón a punta = lpie
+        e1, e2, e3 = extremidades.marco_ortonormal(d_pie, -d_tib)
+        if e2 @ (-y) < 0:
+            e2 = -e2
+        piezas += [_pieza(e) for e in extremidades.pie(
+            suf, tobillo - 0.20 * lpie * e1, e1, e2, e3, lpie, 0.36 * r_mus)["piel"]]
         # Brazo: hombro → codo → muñeca → mano (cruzado frente al tórax)
         hombro = p_tor + 0.95 * b_abd * y + 0.05 * L * t_tor
         alfa, psi = math.radians(30.0), math.radians(70.0)    # hombro y codo (como feto3d.Postura)
@@ -365,17 +366,26 @@ def construir_piezas(eg: float, prop: Proporciones | None = None):
                   k=0.35 * r_bra),
             Pieza(f"antebrazo_{suf}", "cono", dict(a=codo, b=muneca, ra=0.68 * r_bra,
                                                     rb=0.50 * r_bra), k=0.2 * r_bra),
-            Pieza(f"mano_{suf}", "elipsoide",
-                  dict(centro=muneca + 0.45 * largo_mano * d_cub,
-                       semiejes=(0.22 * largo_mano, 0.38 * largo_mano, 0.50 * largo_mano),
-                       R=_marco(n_tor, d_cub)), k=0.12 * r_bra),
         ]
+        e1, e2, e3 = extremidades.marco_ortonormal(d_cub, n_tor)
+        if e2 @ t_tor < 0:
+            e2 = -e2
+        piezas += [_pieza(e) for e in extremidades.mano(suf, muneca, e1, e2, e3, largo_mano,
+                                                         0.15)["piel"]]
 
     piezas += [desde_cabeza(e, resta=True) for e in geo_cab["restas"]]
     extra = dict(bio, OFD=2 * a_cab, L_tronco=L, crown_dir=u, p_cabeza=p_cab, piel_cabeza=piel,
                  c_cabeza=c_cab, nalgas=columna(0.0)[0] - 0.30 * L * t_pel,
                  femures=femures)
     return piezas, extra
+
+
+def _pieza(e):
+    """Elemento de extremidades.mano/pie -> Pieza."""
+    if e["tipo"] == "cono":
+        return Pieza(e["nombre"], "cono", dict(a=e["a"], b=e["b"], ra=e["ra"], rb=e["rb"]), k=e["k"])
+    return Pieza(e["nombre"], "elipsoide", dict(centro=e["centro"], semiejes=e["semiejes"], R=e["R"]),
+                 k=e["k"])
 
 
 def _caja(piezas):

@@ -34,9 +34,10 @@ def test_pie_a_termino_como_recien_nacido():
 def test_pie_del_modelo_3d_mide_lo_esperado():
     for eg in (16, 30, 40):
         f = construir_feto(eg)
-        pie = next(p for p in f.piezas if p.nombre == "pie_i")
-        largo = np.linalg.norm(pie.p["b"] - pie.p["a"]) + pie.p["ra"] + pie.p["rb"]
-        assert largo == pytest.approx(largo_pie(eg, f.bio["LF"]), rel=1e-6)
+        for talon, punta, planta, _ in f.marcos["pies"]:  # talón a punta, sobre el eje del pie
+            eje = (planta - talon) / np.linalg.norm(planta - talon)
+            largo = float((punta - talon) @ eje)
+            assert largo == pytest.approx(largo_pie(eg, f.bio["LF"]), rel=1e-6)
 
 
 @pytest.mark.parametrize("eg", [14, 28])
