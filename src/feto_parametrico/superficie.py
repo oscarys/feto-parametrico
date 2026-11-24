@@ -48,6 +48,8 @@ import numpy as np
 import trimesh
 from skimage.measure import marching_cubes
 
+from . import cabeza
+
 EG_MIN, EG_MAX = 12.0, 40.0   # intervalo de validez de las regresiones
 
 
@@ -188,6 +190,22 @@ def union_suave(d1, d2, k):
     return d2 * (1 - h) + d1 * h - k * h * (1 - h)
 
 
+def resta_suave(d, dc, k):
+    """Sustracción suave: quita de `d` el sólido `dc`; k en mm."""
+    k = max(k, 1e-3)
+    h = np.clip(0.5 - 0.5 * (d + dc) / k, 0.0, 1.0)
+    return d * (1 - h) - dc * h + k * h * (1 - h)
+
+
+def recortar(d, Q, corte):
+    """Conserva sólo n·Q <= dd; corte = (n, dd) o (n, dd, k) con borde suave de k mm."""
+    n, dd = corte[0], corte[1]
+    pl = Q @ np.asarray(n, np.float32) - dd
+    if len(corte) > 2 and corte[2] > 0:
+        return -union_suave(-d, -pl, corte[2])          # máximo suave
+    return np.maximum(d, pl)
+
+
 def _unit(v):
     v = np.asarray(v, dtype=float)
     return v / np.linalg.norm(v)
@@ -212,6 +230,8 @@ class Pieza:
     params: dict
     k: float                       # unión suave con el resto del cuerpo
     extension: tuple = field(default=None)   # (min, max) aproximados
+    resta: bool = False            # se sustrae de la superficie (boca, narinas)
+    corte: tuple = None            # (n, d) en el mundo: sólo se conserva n·P <= d
 
 
 def construir_piezas(eg: float, prop: Proporciones | None = None):
@@ -266,17 +286,27 @@ def construir_piezas(eg: float, prop: Proporciones | None = None):
     # La CC y el DBP de Hadlock se miden en el borde externo del cráneo;
     # el cuero cabelludo agrega `piel` mm por fuera (igual que feto3d).
     piel = 1.2 + 0.02 * dbp
+    Rh = _marco(f, u)
+    n_c, d_c, k_c = cabeza.corte_cara(a_cab, c_cab)
+    n_w = Rh @ n_c
     piezas.append(Pieza("craneo", "elipsoide",
                         dict(centro=p_cab, semiejes=(a_cab + piel, b_cab + piel, c_cab + piel),
-                             R=_marco(f, u)), k=0.2 * b_cab))
-    piezas.append(Pieza("cara", "elipsoide",
-                        dict(centro=p_cab + 0.50 * a_cab * f - 0.45 * c_cab * u,
-                             semiejes=(0.45 * a_cab, 0.66 * b_cab, 0.50 * c_cab),
-                             R=_marco(f, u)), k=0.25 * b_cab))
-    piezas.append(Pieza("nariz", "elipsoide",
-                        dict(centro=p_cab + 0.90 * a_cab * f - 0.30 * c_cab * u,
-                             semiejes=(0.10 * a_cab, 0.10 * b_cab, 0.12 * c_cab),
-                             R=_marco(f, u)), k=0.06 * b_cab))
+                             R=Rh), k=0.2 * b_cab, corte=(n_w, d_c + float(n_w @ p_cab), k_c)))
+    # cara (compartida con feto3d)
+    geo_cab = cabeza.geometria(a_cab, b_cab, c_cab, eg)
+
+    def H(x, y, z):
+        return p_cab + Rh @ np.array([x * a_cab, y * b_cab, z * c_cab], np.float32)
+
+    def desde_cabeza(e, resta=False):
+        if e["tipo"] == "cono":
+            return Pieza(e["nombre"], "cono", dict(a=H(*e["a"]), b=H(*e["b"]), ra=e["ra"],
+                                                     rb=e["rb"]), k=e["k"], resta=resta)
+        return Pieza(e["nombre"], "elipsoide", dict(centro=H(*e["centro"]),
+                                                    semiejes=e["semiejes"], R=Rh),
+                     k=e["k"], resta=resta)
+
+    piezas += [desde_cabeza(e) for e in geo_cab["piel"]]
     for lado in (+1, -1):
         y = np.array([0.0, lado, 0.0])
         piezas.append(Pieza(f"oreja_{'izq' if lado > 0 else 'der'}", "elipsoide",
@@ -323,7 +353,7 @@ def construir_piezas(eg: float, prop: Proporciones | None = None):
         ]
         # Brazo: hombro → codo → muñeca → mano (cruzado frente al tórax)
         hombro = p_tor + 0.95 * b_abd * y + 0.05 * L * t_tor
-        alfa, psi = math.radians(43.0), math.radians(105.0)   # hombro y codo (como feto3d.Postura)
+        alfa, psi = math.radians(30.0), math.radians(70.0)    # hombro y codo (como feto3d.Postura)
         d_hum = _unit(-math.cos(alfa) * t_tor + math.sin(alfa) * n_tor + 0.05 * y)
         codo = hombro + hum * d_hum
         e_cod = _unit(t_tor - (t_tor @ d_hum) * d_hum)
@@ -341,6 +371,7 @@ def construir_piezas(eg: float, prop: Proporciones | None = None):
                        R=_marco(n_tor, d_cub)), k=0.12 * r_bra),
         ]
 
+    piezas += [desde_cabeza(e, resta=True) for e in geo_cab["restas"]]
     extra = dict(bio, OFD=2 * a_cab, L_tronco=L, crown_dir=u, p_cabeza=p_cab, piel_cabeza=piel,
                  c_cabeza=c_cab, nalgas=columna(0.0)[0] - 0.30 * L * t_pel,
                  femures=femures)
@@ -369,7 +400,12 @@ def evaluar_sdf(P, piezas):
             di = sdf_elipsoide(P, **p.params)
         else:
             di = sdf_cono_redondeado(P, **p.params)
-        d = di if d is None else union_suave(d, di, p.k)
+        if p.corte is not None:
+            di = recortar(di, P, p.corte)
+        if p.resta:
+            d = resta_suave(d, di, p.k)
+        else:
+            d = di if d is None else union_suave(d, di, p.k)
     return d
 
 

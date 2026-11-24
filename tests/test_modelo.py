@@ -7,8 +7,7 @@ import numpy as np
 import pytest
 
 from feto_parametrico import biometria, largo_pie, malla_fetal, medir
-from feto_parametrico.feto3d import GRANDE, Escena, construir_feto
-from feto_parametrico.superficie import union_suave
+from feto_parametrico.feto3d import Escena, construir_feto, sdf_piel
 from feto_parametrico.tejidos import T
 from feto_parametrico.vista3d import _malla_prim_np
 
@@ -58,13 +57,7 @@ def test_malla_fina_sin_triangulos_sueltos():
 
 
 def _sdf_cuerpo(piezas, P):
-    d = np.full(len(P), GRANDE, np.float32)
-    for pz in piezas:
-        di = np.full(len(P), GRANDE, np.float32)
-        sel = np.flatnonzero(pz.en_caja(P, pz.k))
-        di[sel] = pz.sdf(P[sel])
-        d = union_suave(d, di, pz.k)
-    return d
+    return sdf_piel(piezas, P)
 
 
 @pytest.mark.parametrize("eg", [14, 22, 30, 39])

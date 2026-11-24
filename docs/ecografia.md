@@ -62,15 +62,22 @@ anterior materna:
 | Nombre | Plano | Medida en la imagen |
 |---|---|---|
 | `transtalamico` | axial de la cabeza a la altura de los tálamos | CC, DBP, DFO |
+| `transcerebelar` | oblicuo por el CSP y el cerebelo | DTC, CM (cisterna magna) |
 | `cuatro_camaras` | axial del tórax a la altura del corazón | — |
 | `abdominal` | axial del abdomen a la altura del estómago | CA |
 | `femur` | plano que contiene el fémur más anterior | LF |
 | `sagital` | sagital medio del tronco | — |
+| `perfil` | sagital medio de la cara | HN (hueso nasal) |
+| `nariz_labios` | coronal tangente a la cara, por la nariz y el mentón | — (labio superior, narinas) |
 
 `medir_en_imagen` mide sobre el mapa de etiquetas de la imagen simulada (no sobre el
 modelo), igual que se haría sobre una imagen real anotada.
 
 ![Planos estándar a 22 semanas: escena con la sonda, ecografía simulada y etiquetas](img/planos_estandar_22s.png)
+
+Planos de la cabeza y la cara (`feto-eco cabeza`):
+
+![Transcerebelar, perfil y nariz-labios a 22 semanas](img/planos_cabeza_22s.png)
 
 | Cine de cuatro cámaras (latido) | Etiquetas superpuestas en `feto-escaner` |
 |---|---|
@@ -91,11 +98,12 @@ res["bmodo"], res["etiquetas"], medir_en_imagen(res, "transtalamico", 0.3, pose)
 ```
 
 ```bash
-feto-eco planos --eg 22        # figura de los cinco planos con medidas
+feto-eco planos --eg 22        # figura de los planos de biometría con medidas
+feto-eco cabeza --eg 22        # transcerebelar, perfil y nariz-labios (DTC, CM, HN)
 feto-eco latido --eg 22        # cine de 4 cámaras (latido y respiración)
 feto-eco combinado --eg 22     # 3D + ecografía con la sonda fija y el feto moviéndose
 feto-eco lote --n 200          # imágenes, etiquetas y JSON para entrenamiento
-feto-eco planos --sonda lineal # los cinco planos con otra sonda (lineal o sectorial)
+feto-eco planos --sonda lineal # los planos de biometría con otra sonda (lineal o sectorial)
 feto-eco sondas                # un plano con las tres sondas (16 semanas por omisión)
 feto-eco planos --eg 22 --idioma en   # la figura con textos en inglés
 ```

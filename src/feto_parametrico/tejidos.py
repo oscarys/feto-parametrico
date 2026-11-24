@@ -49,11 +49,13 @@ TEJIDOS = [
     Tejido("liquido",    1.52, 0.005, 0.005, (0.25, 0.65, 0.85)),  # estómago, vejiga
     Tejido("talamo",     1.59, 0.50,  0.38,  (0.55, 0.55, 0.80)),
     Tejido("hoz",        1.72, 0.80,  1.50,  (1.00, 0.90, 0.30)),
-    Tejido("cerebelo",   1.59, 0.50,  0.45,  (0.60, 0.50, 0.80)),
+    Tejido("cerebelo",   1.62, 0.50,  0.15,  (0.60, 0.50, 0.80)),   # hemisferios: hipoecoicos
     Tejido("vitreo",     1.52, 0.005, 0.003, (0.30, 0.70, 0.95)),
     Tejido("rinon",      1.62, 0.70,  0.50,  (0.70, 0.30, 0.30)),
     Tejido("intestino",  1.62, 0.70,  0.95,  (0.85, 0.70, 0.45)),
     Tejido("cordon",     1.58, 0.40,  0.35,  (0.85, 0.85, 0.75)),
+    Tejido("cristalino", 1.66, 0.30,  0.02,  (0.90, 0.95, 1.00)),   # anecoico, borde brillante
+    Tejido("vermis",     1.64, 0.50,  1.00,  (0.78, 0.62, 0.95)),   # ecogénico
 ]
 T = {t.nombre: i for i, t in enumerate(TEJIDOS)}
 COLORES = np.array([t.color for t in TEJIDOS])

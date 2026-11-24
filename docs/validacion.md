@@ -13,26 +13,34 @@ LCC = longitud cráneo-caudal aproximada; PFE = peso fetal estimado (Hadlock 198
 
 | EG | DBP Hadlock → malla (mm) | CC Hadlock → malla (mm) | LCC (mm) | Volumen (cm³) | PFE (g) | Hermética |
 |---|---|---|---|---|---|---|
-| 12 | 17.3 → 17.2 | 68.0 → 67.2 | 52 | 12 | (fuera de rango) | sí |
+| 12 | 17.3 → 17.2 | 68.0 → 67.1 | 52 | 12 | (fuera de rango) | sí |
 | 20 | 46.3 → 45.8 | 176.8 → 174.8 | 154 | 297 | 336 | sí |
-| 28 | 70.6 → 69.8 | 266.1 → 263.1 | 242 | 1208 | 1230 | sí |
-| 36 | 88.3 → 87.4 | 327.9 → 324.2 | 314 | 2763 | 2828 | sí |
-| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3224 | 3280 | sí |
-| 40 | 94.2 → 93.1 | 346.1 → 342.3 | 344 | 3701 | 3725 | sí |
+| 28 | 70.6 → 69.8 | 266.1 → 263.0 | 242 | 1204 | 1230 | sí |
+| 36 | 88.3 → 87.4 | 327.9 → 324.2 | 314 | 2745 | 2828 | sí |
+| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3201 | 3280 | sí |
+| 40 | 94.2 → 93.1 | 346.1 → 342.2 | 344 | 3673 | 3725 | sí |
 
 Con una densidad de ~1.04 g/cm³, el volumen queda a pocos por ciento del PFE desde
 las 28 semanas y ~10 % por debajo a las 20 semanas.
 
 ## Ecografía simulada (22 semanas)
 
-`feto-eco planos --eg 22`. Medidas sobre el mapa de etiquetas de la imagen simulada:
+`feto-eco planos --eg 22` y `feto-eco cabeza --eg 22`. Medidas sobre el mapa de etiquetas
+de la imagen simulada:
 
-| Medida | Hadlock | En la imagen |
+| Medida | Esperado | En la imagen |
 |---|---|---|
 | CC | 201.3 mm | 201.3 mm |
 | DBP (externo-externo) | 52.9 mm | 52.9 mm |
-| CA | 172.9 mm | 172.6 mm |
+| CA | 172.9 mm | 172.9 mm |
 | LF | 38.4 mm | 40.4 mm (+5 %) |
+| DTC (transcerebelar) | 23.6 mm | 23.8 mm |
+| Cisterna magna | 5.1 mm | 5.3 mm |
+| Hueso nasal (perfil) | 7.3 mm | 7.3 mm |
+
+CC, DBP, CA y LF se comparan con Hadlock; DTC, cisterna magna y hueso nasal con los
+nomogramas de [`cabeza.py`](modelo.md#cara-y-fosa-posterior). La CA se mide tras una
+apertura morfológica que separa los brazos cuando tocan el abdomen.
 
 La LF medida sale sistemáticamente ~5 % larga; la causa no está identificada todavía.
 

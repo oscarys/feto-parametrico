@@ -14,13 +14,15 @@ inside a uterus, and a simulator of B-mode obstetric ultrasound for training.
 
 * **Surface model** from Hadlock biometry (BPD, HC, AC, FL), 12 to 40 weeks;
   watertight meshes in millimetres, exportable to STL/OBJ/PLY.
-* **3D scene**: skull and brain (ventricles, thalami, cerebellum, CSP), four-chamber
-  heart, lungs, liver, stomach, kidneys, bladder, spine, ribs and long bones; uterus,
-  placenta, umbilical cord and maternal abdominal wall.
+* **3D scene**: skull and brain (ventricles, thalami, cerebellum with vermis, cisterna
+  magna, CSP), face with profile, eyes and facial bones, four-chamber heart, lungs,
+  liver, stomach, kidneys, bladder, spine, ribs and long bones; uterus, placenta,
+  umbilical cord and maternal abdominal wall.
 * **Movement**: kicks, startles, head turns, breathing and heartbeat.
 * **Simulated ultrasound** with ground truth: standard planes (transthalamic,
-  four-chamber, abdominal, femur, midsagittal), convex, linear and sector probes,
-  measurements on the image, cine loops and labelled batches for training.
+  four-chamber, abdominal, femur, midsagittal, transcerebellar, profile, nose-and-lips),
+  convex, linear and sector probes, measurements on the image, cine loops and labelled
+  batches for training.
 * **Desktop applications** (PyQt6 + PyVista), in Spanish and English: a viewer of the
   model and a scanning trainer driven by a virtual or physical probe.
 
@@ -95,7 +97,8 @@ With the virtual environment activated:
 | `feto-visor 24` | 3D viewer with a gestational-age slider, organs and biometry |
 | `feto-escaner --eg 22` | scanning trainer: probe on the abdomen and live ultrasound |
 | `feto-malla 20 -o feto20.stl` | surface mesh (STL/OBJ/PLY) |
-| `feto-eco planos --eg 22` | figure of the five standard planes with measurements |
+| `feto-eco planos --eg 22` | figure of the standard biometry planes with measurements |
+| `feto-eco cabeza --eg 22` | transcerebellar, profile and nose-and-lips (TCD, CM, nasal bone) |
 | `feto-eco lote --n 200` | images, label maps and JSON with biometry for training |
 | `feto-render serie 12 20 28 36 40` | fetuses to scale over a ruler |
 | `feto-animacion --eg 22` | 3D video of the fetus moving in the uterus |

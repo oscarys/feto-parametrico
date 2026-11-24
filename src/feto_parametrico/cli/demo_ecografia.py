@@ -5,6 +5,7 @@ demo_ecografia.py — Figuras y videos que combinan el modelo 3D con la
 ecografía simulada.
 
     feto-eco planos   --eg 22   # planos_estandar_22s.png (+ medidas)
+    feto-eco cabeza   --eg 22   # transcerebelar, perfil y nariz-labios (DTC, CM, HN)
     feto-eco latido   --eg 22   # cine de 4 cámaras (latido) .mp4
     feto-eco combinado --eg 22  # 3D + ecografía con el feto moviéndose
     feto-eco lote --n 32        # imágenes + etiquetas + JSON para entrenamiento
@@ -27,20 +28,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
 
-from ..ecografia import (GEOMETRIAS, PLANOS, TIPOS_SONDA, Adquisicion, medir_en_imagen,
-                         plano_estandar, simular, sonda_para)
+from ..ecografia import (GEOMETRIAS, PLANOS, PLANOS_BIOMETRIA, TIPOS_SONDA, Adquisicion,
+                         medir_en_imagen, plano_estandar, simular, sonda_para)
+
+PLANOS_CABEZA = ("transcerebelar", "perfil", "nariz_labios")
 from ..feto3d import Escena, Materno, Postura
 from ..movimiento import Movimiento, guion_demostracion
 from ..tejidos import COLORES, TEJIDOS, T
 from ..vista3d import abanico_3d, agregar_escena, malla_placenta, mallas_escena, sonda_3d
 from ..i18n import N_, agregar_idioma, fijar_idioma, tr
 
-NOMBRES = {"transtalamico": N_("Transtalámico (CC, DBP)"), "cuatro_camaras": N_("Cuatro cámaras"),
-           "abdominal": N_("Abdominal (CA)"), "femur": N_("Fémur (LF)"), "sagital": N_("Sagital medio")}
+NOMBRES = {"transtalamico": N_("Transtalámico (CC, DBP)"),
+           "transcerebelar": N_("Transcerebelar (DTC, CM)"), "cuatro_camaras": N_("Cuatro cámaras"),
+           "abdominal": N_("Abdominal (CA)"), "femur": N_("Fémur (LF)"), "sagital": N_("Sagital medio"),
+           "perfil": N_("Perfil (hueso nasal)"), "nariz_labios": N_("Nariz y labios")}
 # nombre mostrado de cada medida que devuelve medir_en_imagen
 TIPOS = {"convexa": N_("Convexa"), "lineal": N_("Lineal"),
          "sectorial": N_("Sectorial (phased array)")}
-MEDIDAS = {"CC": N_("CC"), "DBP_ext": N_("DBP"), "DFO": N_("DFO"), "CA": N_("CA"), "LF": N_("LF")}
+MEDIDAS = {"CC": N_("CC"), "DBP_ext": N_("DBP"), "DFO": N_("DFO"), "CA": N_("CA"), "LF": N_("LF"),
+           "DTC": N_("DTC"), "CM": N_("CM"), "HN": N_("HN")}
 
 
 # ---------------------------------------------------------------------------
@@ -76,15 +82,18 @@ def superponer_etiquetas(ax, res):
 # Modos
 # ---------------------------------------------------------------------------
 
-def figura_planos(eg=22.0, salida=None, semilla=0, geometria="convexa"):
+def figura_planos(eg=22.0, salida=None, semilla=0, geometria="convexa", planos=PLANOS_BIOMETRIA):
+    """Escena con la sonda, ecografía y etiquetas de cada plano, con sus medidas.
+    Con planos=PLANOS_CABEZA: transcerebelar, perfil y nariz-labios."""
+    cabeza = tuple(planos) == PLANOS_CABEZA
     sufijo = "" if geometria == "convexa" else f"_{geometria}"
-    salida = salida or f"planos_estandar_{eg:g}s{sufijo}.png"
+    salida = salida or f"planos_{'cabeza' if cabeza else 'estandar'}_{eg:g}s{sufijo}.png"
     esc = Escena(eg)
-    mallas = mallas_escena(esc, 110)
-    fig, ax = plt.subplots(3, len(PLANOS), figsize=(5.2 * len(PLANOS), 14.5),
+    mallas = mallas_escena(esc, 140 if cabeza else 110)
+    fig, ax = plt.subplots(3, len(planos), figsize=(5.2 * len(planos), 14.5),
                            gridspec_kw={"height_ratios": [1.15, 1, 1]})
     medidas = {}
-    for j, nom in enumerate(PLANOS):
+    for j, nom in enumerate(planos):
         pose = plano_estandar(esc, nom)
         sonda = sonda_para(pose, geometria=geometria)
         px = 0.15 if sonda.es_lineal else 0.3
@@ -103,9 +112,15 @@ def figura_planos(eg=22.0, salida=None, semilla=0, geometria="convexa"):
         for a in ax[1:, j]:
             a.set_facecolor("black"); a.tick_params(labelsize=8)
     bio = esc.feto.bio
-    fig.suptitle(tr("{eg:g} semanas — Hadlock: DBP {dbp:.1f}, CC {cc:.1f}, CA {ca:.1f}, LF {lf:.1f} mm"
+    if cabeza:
+        titulo = tr("{eg:g} semanas — esperado: DTC {dtc:.1f}, CM {cm:.1f}, HN {hn:.1f} mm"
                     "   |   fila 2: ecografía simulada; fila 3: etiquetas (máscaras de referencia)",
-                    eg=eg, dbp=bio["DBP"], cc=bio["CC"], ca=bio["CA"], lf=bio["LF"]), fontsize=14)
+                    eg=eg, dtc=bio["DTC"], cm=bio["CM"], hn=bio["HN"])
+    else:
+        titulo = tr("{eg:g} semanas — Hadlock: DBP {dbp:.1f}, CC {cc:.1f}, CA {ca:.1f}, LF {lf:.1f} mm"
+                    "   |   fila 2: ecografía simulada; fila 3: etiquetas (máscaras de referencia)",
+                    eg=eg, dbp=bio["DBP"], cc=bio["CC"], ca=bio["CA"], lf=bio["LF"])
+    fig.suptitle(titulo, fontsize=14)
     plt.tight_layout()
     plt.savefig(salida, dpi=90)
     plt.close(fig)
@@ -244,7 +259,7 @@ def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34), geometria="conv
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("modo", choices=["planos", "sondas", "latido", "combinado", "lote"])
+    ap.add_argument("modo", choices=["planos", "cabeza", "sondas", "latido", "combinado", "lote"])
     ap.add_argument("--eg", type=float, default=None,
                     help=tr("semanas (por omisión 22; 16 en el modo sondas)"))
     ap.add_argument("--plano", default=None, choices=PLANOS,
@@ -262,6 +277,8 @@ def main(argv=None):
     eg = a.eg or 22.0
     if a.modo == "planos":
         figura_planos(eg, a.salida, geometria=a.sonda)
+    elif a.modo == "cabeza":
+        figura_planos(eg, a.salida, geometria=a.sonda, planos=PLANOS_CABEZA)
     elif a.modo == "latido":
         cine_latido(eg, a.salida)
     elif a.modo == "combinado":

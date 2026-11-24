@@ -34,7 +34,7 @@ CA y LF, y sirve para comprobar el volumen de la malla.
 |---|---|
 | Cráneo | elipsoide con semieje transverso DBP/2 y diámetro fronto-occipital tal que el perímetro (Ramanujan) es la CC: el **borde externo del cráneo** coincide con Hadlock |
 | Cuero cabelludo | la piel de la cabeza está `1.2 + 0.02·DBP` mm por fuera del cráneo |
-| Cara | cara, nariz y orejas como elipsoides menores; la cabeza puede flexionarse, girar e inclinarse |
+| Cara | perfil con nariz, labios, mentón, mejillas y párpados (ver [Cara y fosa posterior](#cara-y-fosa-posterior)); la cabeza puede flexionarse, girar e inclinarse |
 | Tronco | pelvis, abdomen y tórax a lo largo de una columna en arco; la sección abdominal tiene perímetro CA |
 | Extremidades | conos redondeados; fémur con 0.04·LF de cartílago en cada extremo (la diáfisis osificada mide LF); tibia, húmero y cúbito proporcionales al LF |
 | Pie | talón a punta = LF (razón LF/pie = 1 en toda la gestación) |
@@ -51,7 +51,8 @@ extremidades, ángulos de flexión, etc.) son heurísticas y están reunidas en
 ## Órganos (feto3d)
 
 Cabeza: calota (grosor según DBP), encéfalo, hoz, ventrículos laterales con plexos
-coroideos, tálamos, cavum del septum pellucidum, cerebelo, cisterna magna y ojos.
+coroideos, tálamos, cavum del septum pellucidum, cerebelo (hemisferios y vermis),
+cisterna magna, ojos con cristalino, órbitas, hueso nasal, maxilar, paladar y mandíbula.
 Tronco: corazón con 4 cámaras (eje a 40°), pulmones, aorta, hígado, estómago, vena
 umbilical, intestino, riñones y vejiga. Esqueleto: columna (cuerpos y arcos
 vertebrales, colocados a partir de la piel real de la espalda para que queden dentro
@@ -68,6 +69,29 @@ Presentación (cefálica/podálica) y posición del dorso son parámetros (`Mate
 Las propiedades acústicas de cada tejido (impedancia, atenuación, dispersión) están
 en `tejidos.py`; el hueso cambia con la osificación según la EG.
 
+## Cara y fosa posterior
+
+La cara y la fosa posterior están en `cabeza.py`, compartidas por la superficie y la
+escena 3D. Las posiciones van en el marco de la cabeza, normalizadas por los semiejes
+del cráneo, así que la cara crece con la cabeza:
+
+| Estructura | Cómo se construye |
+|---|---|
+| Perfil | la piel del cráneo se recorta por delante de la recta glabela-mentón; frente, dorso y punta de la nariz, alas nasales, labios, mentón, mejillas y párpados se unen suavemente sobre una cara base |
+| Boca, narinas, ojos cerrados | hendiduras **restadas** de la superficie (sustracción suave de SDF) |
+| Huesos de la cara | hueso nasal (largo según la EG, con piel prenasal de 0.61 × su largo), maxilar y mandíbula en arco, ramas mandibulares, paladar duro, órbitas abiertas por delante |
+| Ojos | vítreo y cristalino (anecoico con borde brillante) |
+| Bóveda | calota y encéfalo terminan en la base del cráneo; por debajo está la cara |
+| Fosa posterior | hemisferios cerebelosos (hipoecoicos) y vermis (ecogénico) con el DTC del nomograma; el cerebelo se coloca de modo que, en el plano transcerebelar, entre el vermis y el occipital quede la cisterna magna |
+
+Medidas de referencia: DTC con `EG = 0.557·DTC + 8.84`
+([Adelabu et al. 2024](https://doi.org/10.4103/jmu.jmu_116_22)); hueso nasal de 5.7 mm a
+las 18 semanas a 7.6 mm a las 23 ([doi:10.1515/jpm-2014-0296](https://doi.org/10.1515/jpm-2014-0296)),
+grosor prenasal 0.61 × hueso nasal ([PubMed 21584886](https://pubmed.ncbi.nlm.nih.gov/21584886/));
+cisterna magna de 2.5 + 0.12·EG mm, dentro del intervalo normal de 2 a 10 mm.
+
+![La cara de tres cuartos a 16, 24 y 32 semanas](img/cara.png)
+
 ## Movimiento
 
 `Postura` controla cuello (flexión, giro, inclinación), curvatura del tronco,
@@ -80,8 +104,8 @@ sobresaltos de brazos, giros de cabeza, episodios de respiración (~0.9 Hz) y la
 
 ## Limitaciones
 
-* Anatomía de primitivas (elipsoides y cápsulas): sin dedos, sin rasgos faciales
-  detallados, órganos con formas simplificadas.
+* Anatomía de primitivas (elipsoides y cápsulas): sin dedos, rasgos faciales
+  esquemáticos, órganos con formas simplificadas.
 * Fuera de 12–40 semanas las regresiones se extrapolan (el programa lo avisa).
 * Las proporciones heurísticas son un punto de partida razonable, no una referencia
   anatómica.

@@ -360,7 +360,10 @@ def pose_hacia(esc: Escena, centro, normal, giro_en_plano=0.0):
                 {"profundidad_objetivo": s, "centro": np.asarray(centro, float), "normal": n})
 
 
-PLANOS = ("transtalamico", "cuatro_camaras", "abdominal", "femur", "sagital")
+PLANOS = ("transtalamico", "transcerebelar", "cuatro_camaras", "abdominal", "femur", "sagital",
+          "perfil", "nariz_labios")
+PLANOS_BIOMETRIA = PLANOS[:6]
+PLANOS_CARA = ("perfil", "nariz_labios")
 
 
 def plano_estandar(esc: Escena, nombre: str, **kw) -> Pose:
@@ -368,6 +371,20 @@ def plano_estandar(esc: Escena, nombre: str, **kw) -> Pose:
     if nombre == "transtalamico":
         c, R = f.marcos["talamos"]
         pose = pose_hacia(esc, esc.a_mundo(c), Rg @ R[:, 2], **kw)
+    elif nombre == "transcerebelar":
+        # oblicuo: pasa por el CSP por delante y por el cerebelo por detrás
+        c1, R = f.marcos["csp"]
+        c2, _ = f.marcos["cerebelo"]
+        n = np.cross(R[:, 1], c2 - c1)
+        n = n if n @ R[:, 2] > 0 else -n
+        pose = pose_hacia(esc, esc.a_mundo(0.5 * (c1 + c2)), Rg @ _unit(n), **kw)
+    elif nombre == "perfil":
+        c, R = f.marcos["perfil"]
+        pose = pose_hacia(esc, esc.a_mundo(c), Rg @ R[:, 1], **kw)
+        pose.info["hueso_nasal"] = tuple(esc.a_mundo(q) for q in f.marcos["hueso_nasal"])
+    elif nombre == "nariz_labios":
+        c, n = f.marcos["nariz_labios"]
+        pose = pose_hacia(esc, esc.a_mundo(c), Rg @ n, **kw)
     elif nombre == "cuatro_camaras":
         c, R = f.marcos["corazon"]
         pose = pose_hacia(esc, esc.a_mundo(c), Rg @ R[:, 2], **kw)
@@ -411,14 +428,15 @@ def _perimetro_elipse(a, b):
 
 
 def medir_en_imagen(res, plano, px, pose: Pose | None = None):
-    """CC/DBP, CA o LF medidos sobre las etiquetas de la imagen simulada (mm)."""
-    from scipy.ndimage import binary_fill_holes, label as etiquetar
+    """Medidas sobre las etiquetas de la imagen simulada (mm): CC/DBP/DFO
+    (transtalámico), DTC y CM (transcerebelar), CA, LF y HN (hueso nasal, perfil)."""
+    from scipy.ndimage import binary_fill_holes, distance_transform_edt, label as etiquetar
     from skimage.measure import regionprops
     lab = res["etiquetas"]
     out = {}
     if plano == "transtalamico":
         cab = np.isin(lab, [T[k] for k in ("hueso", "cerebro", "lcr", "coroides", "talamo",
-                                           "hoz", "cerebelo")])
+                                           "hoz", "cerebelo", "vermis")])
         comp, _ = etiquetar(cab)
         sem = comp[lab == T["talamo"]]
         if sem.size:
@@ -426,12 +444,57 @@ def medir_en_imagen(res, plano, px, pose: Pose | None = None):
             rp = regionprops(m.astype(int))[0]
             A, B = rp.axis_major_length * px / 2, rp.axis_minor_length * px / 2
             out = {"CC": _perimetro_elipse(A, B), "DBP_ext": 2 * B, "DFO": 2 * A}
+    elif plano == "transcerebelar":
+        comp, _ = etiquetar(np.isin(lab, [T["cerebelo"], T["vermis"]]))
+        if comp.max():
+            k = np.bincount(comp[comp > 0]).argmax()
+            yy, xx = np.nonzero(comp == k)
+            q = np.column_stack([xx, yy]) * px
+            centro = q.mean(0)
+            v = np.linalg.svd(q - centro, full_matrices=False)[2]
+            proy = (q - centro) @ v[0]
+            out["DTC"] = proy.max() - proy.min() + px
+            # cisterna magna: el LCR pegado al cerebelo, medido a lo ancho (perpendicular al DTC)
+            lcr, n = etiquetar(lab == T["lcr"])
+            if n:
+                yy, xx = np.nonzero(lcr)
+                q = np.column_stack([xx, yy]) * px
+                dist = np.hypot(*(q - centro).T)
+                j = lcr[yy[dist.argmin()], xx[dist.argmin()]]
+                if dist.min() < 0.5 * out["DTC"]:
+                    pr = (q[lcr[yy, xx] == j] - centro) @ v[1]
+                    out["CM"] = pr.max() - pr.min() + px
+    elif plano == "perfil" and pose is not None:
+        comp, n = etiquetar(lab == T["hueso"])
+        hn = pose.info.get("hueso_nasal")
+        if n and hn is not None:
+            cm = 0.5 * (hn[0] + hn[1]) - pose.origen
+            col = int(round((cm @ pose.ex - res["xs"][0]) / px))
+            fil = int(round((cm @ pose.ez - res["zs"][0]) / px))
+            ventana = comp[max(fil - 3, 0):fil + 4, max(col - 3, 0):col + 4]
+            ks = ventana[ventana > 0]
+            if ks.size:
+                yy, xx = np.nonzero(comp == np.bincount(ks).argmax())
+                q = np.column_stack([xx, yy]) * px
+                q = q - q.mean(0)
+                v = np.linalg.svd(q, full_matrices=False)[2][0]
+                proy = q @ v
+                out["HN"] = proy.max() - proy.min() + px
     elif plano == "abdominal":
         cuerpo = (lab >= T["fetal"]) & (lab != T["amniotico"]) & (lab != T["cordon"])
         comp, _ = etiquetar(binary_fill_holes(cuerpo))
         sem = comp[lab == T["liquido"]]          # el estómago está en el abdomen
         if sem.size and (sem > 0).any():
             m = comp == np.bincount(sem[sem > 0]).argmax()
+            # apertura con un disco de ~1/4 del radio: separa brazos o piernas que
+            # tocan el abdomen (como al ajustar la elipse sólo a la piel del abdomen)
+            r = 0.25 * math.sqrt(m.sum() / math.pi)
+            nucleo = distance_transform_edt(m) > r
+            m = m & (distance_transform_edt(~nucleo) <= r)
+            comp, _ = etiquetar(m)
+            sem = comp[lab == T["liquido"]]
+            if (sem > 0).any():
+                m = comp == np.bincount(sem[sem > 0]).argmax()
             rp = regionprops(m.astype(int))[0]
             A, B = rp.axis_major_length * px / 2, rp.axis_minor_length * px / 2
             out = {"CA": _perimetro_elipse(A, B)}

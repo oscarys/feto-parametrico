@@ -120,7 +120,7 @@ def agregar_feto(p: pv.Plotter, datos: dict, *, color=COLOR_PIEL, opacidad=1.0,
 # Nombres para la leyenda (por tejido) y para los rótulos (por órgano)
 LEYENDA = {"calota": N_("Calota"), "hueso": N_("Huesos"), "cerebro": N_("Encéfalo"),
            "lcr": N_("LCR (ventrículos, CSP, cisterna)"), "coroides": N_("Plexos coroideos"),
-           "talamo": N_("Tálamos"), "cerebelo": N_("Cerebelo"), "vitreo": N_("Ojos"),
+           "talamo": N_("Tálamos"), "cerebelo": N_("Cerebelo"), "vermis": N_("Vermis"), "vitreo": N_("Ojos"), "cristalino": N_("Cristalino"),
            "miocardio": N_("Corazón (miocardio)"), "sangre": N_("Sangre (cámaras, vasos)"),
            "pulmon": N_("Pulmones"), "higado": N_("Hígado"), "liquido": N_("Estómago y vejiga"),
            "rinon": N_("Riñones"), "intestino": N_("Intestino")}
@@ -134,7 +134,9 @@ ROTULOS = {"calota": (N_("Calota"), (0.0, 0.0, 1.0)), "encefalo": (N_("Encéfalo
            "vejiga": (N_("Vejiga"), None), "intestino": (N_("Intestino"), None), "aorta": (N_("Aorta"), None),
            "vena_umbilical": (N_("Vena umbilical"), None), "vertebra13": (N_("Columna"), None),
            "costilla3+12": (N_("Costilla"), None), "femur_i": (N_("Fémur"), None), "tibia_i": (N_("Tibia"), None),
-           "humero_i": (N_("Húmero"), None), "cubito_i": (N_("Cúbito"), None)}
+           "humero_i": (N_("Húmero"), None), "cubito_i": (N_("Cúbito"), None),
+           "cisterna_magna": (N_("Cisterna magna"), None), "hueso_nasal": (N_("Hueso nasal"), None),
+           "mandibula4": (N_("Mandíbula"), None), "cristalino_i": (N_("Cristalino"), None)}
 
 
 def organos_cuerpo(eg: float) -> dict:

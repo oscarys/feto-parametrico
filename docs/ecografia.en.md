@@ -62,16 +62,24 @@ maternal wall:
 | Name | Plane | Measurement on the image |
 |---|---|---|
 | `transtalamico` | axial plane of the head at the level of the thalami | HC, BPD, OFD |
+| `transcerebelar` (transcerebellar) | oblique plane through the CSP and the cerebellum | TCD, CM (cisterna magna) |
 | `cuatro_camaras` | axial plane of the thorax at the level of the heart (four-chamber) | — |
 | `abdominal` | axial plane of the abdomen at the level of the stomach | AC |
 | `femur` | plane containing the more anterior femur | FL |
 | `sagital` | midsagittal plane of the trunk | — |
+| `perfil` (profile) | midsagittal plane of the face | NBL (nasal bone) |
+| `nariz_labios` (nose and lips) | coronal plane tangent to the face, through the nose and chin | — (upper lip, nostrils) |
 
 `medir_en_imagen` (measure on image) measures on the label map of the simulated image,
 not on the model, just as one would on an annotated real image. It returns Spanish keys:
-`CC` (HC), `DBP_ext` (BPD, outer–outer), `DFO` (OFD), `CA` (AC), `LF` (FL).
+`CC` (HC), `DBP_ext` (BPD, outer–outer), `DFO` (OFD), `CA` (AC), `LF` (FL), `DTC` (TCD),
+`CM` (cisterna magna), `HN` (NBL).
 
 ![Standard planes at 22 weeks: scene with the probe, simulated ultrasound and labels](img/planos_estandar_22s_en.png)
+
+Head and face planes (`feto-eco cabeza`):
+
+![Transcerebellar, profile and nose-and-lips planes at 22 weeks](img/planos_cabeza_22s_en.png)
 
 | Four-chamber cine (heartbeat) | Label overlay in `feto-escaner` |
 |---|---|
@@ -92,11 +100,12 @@ res["bmodo"], res["etiquetas"], medir_en_imagen(res, "transtalamico", 0.3, pose)
 ```
 
 ```bash
-feto-eco planos --eg 22        # figure of the five planes with measurements
+feto-eco planos --eg 22        # figure of the biometry planes with measurements
+feto-eco cabeza --eg 22        # transcerebellar, profile and nose-and-lips (TCD, CM, NBL)
 feto-eco latido --eg 22        # four-chamber cine (heartbeat and breathing)
 feto-eco combinado --eg 22     # 3D + ultrasound with a fixed probe and a moving fetus
 feto-eco lote --n 200          # images, label maps and JSON for training
-feto-eco planos --sonda lineal # the five planes with another probe (lineal or sectorial)
+feto-eco planos --sonda lineal # the biometry planes with another probe (lineal or sectorial)
 feto-eco sondas                # one plane with all three probes (16 weeks by default)
 feto-eco planos --eg 22 --idioma en   # the figure with English text
 ```

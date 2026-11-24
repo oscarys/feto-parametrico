@@ -29,7 +29,9 @@ import numpy as np
 
 from .superficie import (EG_MAX, EG_MIN, Proporciones, _marco, _unit, biometria, largo_pie,
                               sdf_cono_redondeado, sdf_elipsoide,
-                              semieje_mayor_elipse, semiejes_por_perimetro, union_suave)
+                              recortar, resta_suave, semieje_mayor_elipse, semiejes_por_perimetro,
+                         union_suave)
+from . import cabeza
 from .tejidos import T, osificacion
 
 GRANDE = 1e5      # "infinito" finito para la unión suave con piezas descartadas
@@ -49,9 +51,9 @@ class Postura:
     cadera: tuple = (115.0, 115.0)  # flexión de cadera (0 = extendida)
     abd_muslo: tuple = (0.30, 0.30)
     rodilla: tuple = (125.0, 125.0) # flexión de rodilla (0 = extendida)
-    hombro: tuple = (43.0, 43.0)    # brazo: ángulo desde "abajo" hacia anterior
+    hombro: tuple = (30.0, 30.0)    # brazo: ángulo desde "abajo" hacia anterior
     abd_brazo: tuple = (0.05, 0.05)
-    codo: tuple = (105.0, 105.0)    # flexión de codo
+    codo: tuple = (70.0, 70.0)      # flexión de codo (manos frente al pecho, cara libre)
     resp: float = 0.0               # movimiento respiratorio, -1..1
     fase_card: float = 0.0          # fase del ciclo cardiaco, 0..1
     giro_global: float = 0.0        # giro del feto sobre su eje longitudinal
@@ -73,8 +75,11 @@ def _rot(eje, ang_rad):
 class Prim:
     """Primitiva geométrica con marco local (centro, R: columnas = ejes)."""
 
-    def __init__(self, nombre, tipo, etiqueta=None, k=0.0, **p):
+    def __init__(self, nombre, tipo, etiqueta=None, k=0.0, resta=False, **p):
+        """`resta`: la pieza se sustrae (suavemente) de la superficie corporal.
+        p["corte"] = (n, d) en el marco local: sólo se conserva n·q <= d."""
         self.nombre, self.tipo, self.etiqueta, self.k = nombre, tipo, etiqueta, k
+        self.resta = resta
         self.p = p
         if tipo == "cono":
             a, b = np.asarray(p["a"], float), np.asarray(p["b"], float)
@@ -94,15 +99,19 @@ class Prim:
     def sdf(self, P):
         p = self.p
         if self.tipo == "elip":
-            return sdf_elipsoide(P, self.centro, p["semiejes"], self.R)
-        if self.tipo == "cono":
+            d = sdf_elipsoide(P, self.centro, p["semiejes"], self.R)
+        elif self.tipo == "cono":
             return sdf_cono_redondeado(P, p["a"], p["b"], p["ra"], p["rb"])
-        if self.tipo == "cascara":           # elipsoide hueco de grosor dado
+        elif self.tipo == "cascara":           # elipsoide hueco de grosor dado
             ext = sdf_elipsoide(P, self.centro, p["semiejes"], self.R)
             inn = sdf_elipsoide(P, self.centro,
                                 tuple(s - p["grosor"] for s in p["semiejes"]), self.R)
-            return np.maximum(ext, -inn)
-        raise ValueError(self.tipo)
+            d = np.maximum(ext, -inn)
+        else:
+            raise ValueError(self.tipo)
+        if "corte" in p:
+            d = recortar(d, self.local(P), p["corte"])
+        return d
 
     def local(self, P):
         return (P - self.centro) @ self.R
@@ -119,7 +128,7 @@ class Prim:
         else:
             p["centro"] = Rg @ self.centro + tg
             p["R"] = (Rg @ self.R).astype(np.float32)
-        return Prim(self.nombre, self.tipo, self.etiqueta, self.k, **p)
+        return Prim(self.nombre, self.tipo, self.etiqueta, self.k, self.resta, **p)
 
 
 # ---------------------------------------------------------------------------
@@ -194,12 +203,23 @@ def construir_feto(eg: float, post: Postura | None = None,
         Prim("cuello", "cono", k=0.15 * b_cab, a=p_cue - 0.1 * L * t_cue,
              b=p_cab - 0.5 * c_cab * u0, ra=0.55 * b_abd, rb=0.42 * b_cab),
         Prim("craneo", "elip", k=0.2 * b_cab, centro=p_cab,
-             semiejes=(a_cab + piel, b_cab + piel, c_cab + piel), R=Rh),
-        Prim("cara", "elip", k=0.25 * b_cab, centro=H(0.50, 0, -0.45),
-             semiejes=(0.45 * a_cab, 0.66 * b_cab, 0.50 * c_cab), R=Rh),
-        Prim("nariz", "elip", k=0.06 * b_cab, centro=H(0.90, 0, -0.30),
-             semiejes=(0.10 * a_cab, 0.10 * b_cab, 0.12 * c_cab), R=Rh),
+             semiejes=(a_cab + piel, b_cab + piel, c_cab + piel), R=Rh,
+             corte=cabeza.corte_cara(a_cab, c_cab)),
     ]
+    geo_cab = cabeza.geometria(a_cab, b_cab, c_cab, eg)
+
+    def desde_cabeza(e, resta=False):
+        """Elemento de cabeza.geometria -> Prim en el cuerpo."""
+        etq = T[e["tejido"]] if e["tejido"] else None
+        if e["tipo"] == "cono":
+            return Prim(e["nombre"], "cono", etq, k=e["k"], resta=resta, a=H(*e["a"]),
+                        b=H(*e["b"]), ra=e["ra"], rb=e["rb"])
+        extra = {k: e[k] for k in ("grosor", "corte") if k in e}
+        R = (Rh @ e["R_local"]).astype(np.float32) if "R_local" in e else Rh
+        return Prim(e["nombre"], e["tipo"], etq, k=e["k"], resta=resta, centro=H(*e["centro"]),
+                    semiejes=e["semiejes"], R=R, **extra)
+
+    piezas += [desde_cabeza(e) for e in geo_cab["piel"]]
     for lado in (+1, -1):
         piezas.append(Prim(f"oreja{lado:+d}", "elip", k=0.05 * b_cab,
                            centro=H(-0.08, 0.97 * lado, -0.1),
@@ -215,23 +235,29 @@ def construir_feto(eg: float, post: Postura | None = None,
         s = (sx, sy, sz) if absoluto else (sx * a_cab, sy * b_cab, sz * c_cab)
         return Prim(nombre, "elip", etq, centro=H(x, y, z), semiejes=s, R=Rh)
 
+    # bóveda: calota y encéfalo terminan en la base del cráneo (por debajo, la cara)
+    n_base, d_base = cabeza.corte_base(a_cab, c_cab)
+    base = dict(corte=(n_base, d_base))
     organos += [
-        Prim("calota", "cascara", T["hueso"], centro=p_cab, semiejes=sem_cal,
-             grosor=g_hueso, R=Rh),
-        Prim("encefalo", "elip", T["cerebro"], centro=p_cab, semiejes=sem_enc, R=Rh),
+        Prim("encefalo", "elip", T["cerebro"], centro=p_cab, semiejes=sem_enc, R=Rh, **base),
         Prim("hoz", "elip", T["hoz"], centro=H(0.0, 0, 0.30),
              semiejes=(0.78 * sem_enc[0], 0.35 + 0.004 * dbp, 0.55 * sem_enc[2]), R=Rh),
-        EH("cisterna_magna", T["lcr"], -0.62, 0, -0.42, 0.13, 0.20, 0.12),
-        EH("cerebelo", T["cerebelo"], -0.52, 0, -0.40, 0.12, 0.30, 0.13),
     ]
+    organos += [desde_cabeza(e) for e in geo_cab["organos"]
+                if not e["nombre"].startswith(("ojo_", "orbita_", "cristalino_"))]
+    # la calota se pinta después de la fosa posterior: la cisterna magna llega al hueso
+    organos.append(Prim("calota", "cascara", T["hueso"], centro=p_cab, semiejes=sem_cal,
+                        grosor=g_hueso, R=Rh, **base))
     for lado, sfx in ((+1, "i"), (-1, "d")):
         organos += [
             EH(f"ventriculo_{sfx}", T["lcr"], -0.16, 0.33 * lado, 0.06,
                0.42 * a_cab, 0.65 * at, 0.16 * c_cab, absoluto=True),
             EH(f"coroides_{sfx}", T["coroides"], -0.40, 0.33 * lado, 0.04,
                0.15 * a_cab, 0.75 * at, 0.10 * c_cab, absoluto=True),
-            EH(f"ojo_{sfx}", T["vitreo"], 0.74, 0.30 * lado, -0.24, 0.11, 0.11, 0.11),
         ]
+    # órbitas, ojos y cristalinos (en este orden: el ojo se pinta sobre la órbita)
+    organos += [desde_cabeza(e) for e in geo_cab["organos"]
+                if e["nombre"].startswith(("orbita_", "ojo_", "cristalino_"))]
     organos += [EH("talamo_i", T["talamo"], -0.04, 0.13, -0.02, 0.18, 0.11, 0.14),
                 EH("talamo_d", T["talamo"], -0.04, -0.13, -0.02, 0.18, 0.11, 0.14),
                 EH("csp", T["lcr"], 0.30, 0, 0.01, 0.08, 0.04, 0.07)]
@@ -408,9 +434,27 @@ def construir_feto(eg: float, post: Postura | None = None,
                                 muneca - 0.18 * r_bra * perp, 0.028 * lf, 0.08)]
         humeros.append((hombro, codo))
 
+    # al final: boca y narinas se restan de toda la superficie
+    piezas += [desde_cabeza(e, resta=True) for e in geo_cab["restas"]]
+
+    por_nombre = {o.nombre: o for o in organos}
+    # plano coronal tangente a la cara, por la punta de la nariz y el mentón, 2 mm por
+    # dentro de la piel: corta labios y narinas rodeados de líquido
+    pz = {e["nombre"]: e for e in geo_cab["piel"]}
+    frente = lambda e: H(*e["centro"]) + e["semiejes"][0] * f    # noqa: E731
+    punta, menton = frente(pz["punta_nasal"]), frente(pz["menton"])
+    n_nl = _unit(np.cross(yh, menton - punta))
+    n_nl = n_nl if n_nl @ f > 0 else -n_nl
+    plano_nariz_labios = (0.5 * (punta + menton) - (2.0 + 0.02 * dbp) * n_nl, n_nl)
+    hn = por_nombre["hueso_nasal"]
     marcos = {
         "cabeza": (p_cab, Rh),
         "talamos": (H(0.0, 0, 0.0), Rh),
+        "cerebelo": (por_nombre["cerebelo"].centro, Rh),
+        "csp": (por_nombre["csp"].centro, Rh),
+        "hueso_nasal": (np.asarray(hn.p["a"]), np.asarray(hn.p["b"])),
+        "perfil": (H(0.80, 0, -0.45), Rh),                 # centro de la cara, línea media
+        "nariz_labios": plano_nariz_labios,
         "corazon": (c_cor, Rt),            # plano axial del tórax a la altura del corazón
         "abdomen": marco_tronco(0.47),     # plano de la circunferencia abdominal
         "columna": marco_tronco(0.55),
@@ -418,7 +462,7 @@ def construir_feto(eg: float, post: Postura | None = None,
         "humeros": humeros,
         "insercion_cordon": (ins_cordon, n_ins),
     }
-    bio = dict(bio, OFD=2 * a_cab, a_abd=a_abd, b_abd=b_abd, L_tronco=L,
+    bio = dict(bio, **geo_cab["medidas"], OFD=2 * a_cab, a_abd=a_abd, b_abd=b_abd, L_tronco=L,
                semiejes_cabeza=(a_cab, b_cab, c_cab))
     return Feto(eg, piezas, organos, marcos, bio)
 
@@ -579,6 +623,9 @@ class Escena:
                 sel = np.flatnonzero(pz.en_caja(Q, pz.k))
                 if not len(sel):
                     continue
+                if pz.resta:
+                    d[sel] = resta_suave(d[sel], pz.sdf(Q[sel]), pz.k)
+                    continue
                 di = np.full(len(Q), GRANDE, np.float32)
                 di[sel] = pz.sdf(Q[sel])
                 mejor = di < dmin
@@ -617,6 +664,20 @@ class Escena:
     def con_postura(self, post: Postura) -> "Escena":
         """Misma madre/útero, otra postura del feto (el cordón se recalcula)."""
         return Escena(self.eg, post, self.prop, self.mat)
+
+
+def sdf_piel(piezas, P):
+    """Distancia con signo a la piel fetal: unión suave de las piezas menos las restas."""
+    d = np.full(len(P), GRANDE, np.float32)
+    for pz in piezas:
+        sel = np.flatnonzero(pz.en_caja(P, pz.k))
+        if pz.resta:
+            d[sel] = resta_suave(d[sel], pz.sdf(P[sel]), pz.k)
+            continue
+        di = np.full(len(P), GRANDE, np.float32)
+        di[sel] = pz.sdf(P[sel])
+        d = union_suave(d, di, pz.k)
+    return d
 
 
 def _caja(prims):

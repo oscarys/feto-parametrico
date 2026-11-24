@@ -182,5 +182,20 @@
   "tipo de sonda (modos planos y lote)": "probe type (planos and lote modes)",
   "plano (por omisión sagital; transtalamico en el modo sondas)": "plane (default sagital; transtalamico in sondas mode)",
   "semanas (por omisión 22; 16 en el modo sondas)": "weeks (default 22; 16 in sondas mode)",
-  "{eg:g} semanas, plano {plano}: el mismo corte con cada tipo de sonda (mm)": "{eg:g} weeks, {plano} plane: the same section with each probe type (mm)"
+  "{eg:g} semanas, plano {plano}: el mismo corte con cada tipo de sonda (mm)": "{eg:g} weeks, {plano} plane: the same section with each probe type (mm)",
+  "CM": "CM",
+  "Cisterna magna": "Cisterna magna",
+  "Cristalino": "Lens",
+  "DTC": "TCD",
+  "HN": "NBL",
+  "Hueso nasal": "Nasal bone",
+  "Mandíbula": "Mandible",
+  "Nariz y labios": "Nose and lips",
+  "Perfil": "Profile",
+  "Perfil (hueso nasal)": "Profile (nasal bone)",
+  "Transcerebelar": "Transcerebellar",
+  "Transcerebelar (DTC, CM)": "Transcerebellar (TCD, CM)",
+  "Vermis": "Vermis",
+  "esperado": "expected",
+  "{eg:g} semanas — esperado: DTC {dtc:.1f}, CM {cm:.1f}, HN {hn:.1f} mm   |   fila 2: ecografía simulada; fila 3: etiquetas (máscaras de referencia)": "{eg:g} weeks — expected: TCD {dtc:.1f}, CM {cm:.1f}, NBL {hn:.1f} mm   |   row 2: simulated ultrasound; row 3: labels (ground truth)"
 }

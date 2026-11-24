@@ -18,8 +18,8 @@ from __future__ import annotations
 import numpy as np
 from skimage.measure import marching_cubes
 
-from .feto3d import GRANDE, Escena, _caja
-from .superficie import componente_mayor, union_suave
+from .feto3d import Escena, _caja, sdf_piel
+from .superficie import componente_mayor
 from .tejidos import TEJIDOS, T
 from . import mallas_np as mnp
 
@@ -39,7 +39,8 @@ pv = _PyVistaPerezoso()
 OPACIDAD = {"hueso": 1.0, "cerebro": 0.12, "lcr": 1.0, "coroides": 1.0, "talamo": 1.0,
             "cerebelo": 0.9, "hoz": 0.0, "vitreo": 1.0, "miocardio": 0.45, "sangre": 1.0,
             "pulmon": 0.40, "higado": 0.75, "liquido": 1.0, "rinon": 1.0,
-            "intestino": 0.6, "cordon": 1.0}
+            "intestino": 0.6, "cordon": 1.0, "cristalino": 1.0,
+            "vermis": 0.9}
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +50,12 @@ OPACIDAD = {"hueso": 1.0, "cerebro": 0.12, "lcr": 1.0, "coroides": 1.0, "talamo"
 def _malla_prim_np(pr):
     if pr.tipo in ("elip", "cascara"):
         se = pr.p["semiejes"]
-        return mnp.elipsoide(se, pr.R, pr.centro, fino=max(se) > 4)
+        V, F = mnp.elipsoide(se, pr.R, pr.centro, fino=max(se) > 4)
+        if "corte" in pr.p:                   # sólo las caras del lado que se conserva
+            n, d = pr.p["corte"][:2]
+            dentro = pr.local(V) @ np.asarray(n) <= d
+            F = F[dentro[F].all(axis=1)]
+        return V, F
     return mnp.capsula(pr.p["a"], pr.p["b"], 0.5 * (pr.p["ra"] + pr.p["rb"]))
 
 
@@ -83,12 +89,7 @@ def malla_piel_np(esc: Escena, resolucion: int = 120):
     ejes = [np.arange(lo[i], hi[i] + h, h, dtype=np.float32) for i in range(3)]
     X, Yg, Z = np.meshgrid(*ejes, indexing="ij")
     P = np.column_stack([X.ravel(), Yg.ravel(), Z.ravel()])
-    d = np.full(len(P), GRANDE, np.float32)
-    for pz in piezas:
-        sel = np.flatnonzero(pz.en_caja(P, pz.k))
-        di = np.full(len(P), GRANDE, np.float32)
-        di[sel] = pz.sdf(P[sel])
-        d = union_suave(d, di, pz.k)
+    d = sdf_piel(piezas, P)
     v, f, _, _ = marching_cubes(d.reshape(X.shape), 0.0, spacing=(h, h, h))
     m = componente_mayor(trimesh.Trimesh(esc.a_mundo(v + lo), f, process=True))
     trimesh.smoothing.filter_taubin(m, iterations=10)

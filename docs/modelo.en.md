@@ -36,7 +36,7 @@ and is used to check the mesh volume.
 |---|---|
 | Skull | ellipsoid with transverse semi-axis BPD/2 and an occipitofrontal diameter chosen so that its perimeter (Ramanujan) equals HC: the **outer edge of the skull** matches Hadlock |
 | Scalp | the head skin lies `1.2 + 0.02·BPD` mm outside the skull |
-| Face | face, nose and ears as smaller ellipsoids; the head can flex, turn and tilt |
+| Face | profile with nose, lips, chin, cheeks and eyelids (see [Face and posterior fossa](#face-and-posterior-fossa)); the head can flex, turn and tilt |
 | Trunk | pelvis, abdomen and thorax along an arched spine; the abdominal cross-section has perimeter AC |
 | Limbs | rounded cones; femur with 0.04·FL of cartilage at each end (the ossified shaft measures FL); tibia, humerus and ulna proportional to FL |
 | Foot | heel to toe = FL (FL/foot ratio = 1 throughout gestation) |
@@ -52,7 +52,8 @@ are heuristic and gathered in `Proporciones` so they can be edited.
 ## Organs (feto3d)
 
 Head: calvarium (thickness from BPD), brain, falx, lateral ventricles with choroid
-plexuses, thalami, cavum septi pellucidi, cerebellum, cisterna magna and eyes. Trunk:
+plexuses, thalami, cavum septi pellucidi, cerebellum (hemispheres and vermis), cisterna
+magna, eyes with lens, orbits, nasal bone, maxilla, palate and mandible. Trunk:
 four-chamber heart (axis at 40°), lungs, aorta, liver, stomach, umbilical vein, bowel,
 kidneys and bladder. Skeleton: spine (vertebral bodies and arches, placed from the actual
 skin of the back so they stay inside the body at every age), ribs and long bones (femur,
@@ -69,6 +70,29 @@ Presentation (cephalic/breech) and the position of the fetal back are parameters
 The acoustic properties of each tissue (impedance, attenuation, scattering) are in
 `tejidos.py`; bone properties change with ossification according to GA.
 
+## Face and posterior fossa
+
+The face and the posterior fossa live in `cabeza.py` (head), shared by the surface
+and the 3D scene. Positions are given in the head frame, normalized by the skull
+semi-axes, so the face grows with the head:
+
+| Structure | How it is built |
+|---|---|
+| Profile | the skull skin is trimmed in front of the glabella–chin line; forehead, nasal bridge and tip, nasal alae, lips, chin, cheeks and eyelids are smoothly joined onto a base face |
+| Mouth, nostrils, closed eyes | slits **subtracted** from the surface (smooth SDF subtraction) |
+| Facial bones | nasal bone (length by GA, with prenasal skin 0.61 × its length), maxillary and mandibular arches, mandibular rami, hard palate, orbits open in front |
+| Eyes | vitreous and lens (anechoic with a bright rim) |
+| Vault | calvarium and brain stop at the skull base; the face lies below it |
+| Posterior fossa | cerebellar hemispheres (hypoechoic) and vermis (echogenic) with the nomogram TCD; the cerebellum is placed so that, in the transcerebellar plane, the cisterna magna fills the gap between the vermis and the occipital bone |
+
+Reference measurements: TCD from `GA = 0.557·TCD + 8.84`
+([Adelabu et al. 2024](https://doi.org/10.4103/jmu.jmu_116_22)); nasal bone from 5.7 mm at
+18 weeks to 7.6 mm at 23 ([doi:10.1515/jpm-2014-0296](https://doi.org/10.1515/jpm-2014-0296)),
+prenasal thickness 0.61 × nasal bone ([PubMed 21584886](https://pubmed.ncbi.nlm.nih.gov/21584886/));
+cisterna magna 2.5 + 0.12·GA mm, within the normal 2–10 mm range.
+
+![The face in three-quarter view at 16, 24 and 32 weeks](img/cara_en.png)
+
 ## Movement
 
 `Postura` (pose) controls the neck (flexion, turn, tilt), trunk curvature, hips, knees,
@@ -81,7 +105,7 @@ kinematics.
 
 ## Limitations
 
-* Primitive-based anatomy (ellipsoids and capsules): no fingers, no detailed facial
+* Primitive-based anatomy (ellipsoids and capsules): no fingers, schematic facial
   features, simplified organ shapes.
 * Outside 12–40 weeks the regressions are extrapolated (the program warns).
 * The heuristic proportions are a reasonable starting point, not an anatomical reference.

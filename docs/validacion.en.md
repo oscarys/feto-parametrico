@@ -13,26 +13,34 @@ crown-rump length; EFW = estimated fetal weight (Hadlock 1985).
 
 | GA (weeks) | BPD Hadlock → mesh (mm) | HC Hadlock → mesh (mm) | CRL (mm) | Volume (cm³) | EFW (g) | Watertight |
 |---|---|---|---|---|---|---|
-| 12 | 17.3 → 17.2 | 68.0 → 67.2 | 52 | 12 | (out of range) | yes |
+| 12 | 17.3 → 17.2 | 68.0 → 67.1 | 52 | 12 | (out of range) | yes |
 | 20 | 46.3 → 45.8 | 176.8 → 174.8 | 154 | 297 | 336 | yes |
-| 28 | 70.6 → 69.8 | 266.1 → 263.1 | 242 | 1208 | 1230 | yes |
-| 36 | 88.3 → 87.4 | 327.9 → 324.2 | 314 | 2763 | 2828 | yes |
-| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3224 | 3280 | yes |
-| 40 | 94.2 → 93.1 | 346.1 → 342.3 | 344 | 3701 | 3725 | yes |
+| 28 | 70.6 → 69.8 | 266.1 → 263.0 | 242 | 1204 | 1230 | yes |
+| 36 | 88.3 → 87.4 | 327.9 → 324.2 | 314 | 2745 | 2828 | yes |
+| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3201 | 3280 | yes |
+| 40 | 94.2 → 93.1 | 346.1 → 342.2 | 344 | 3673 | 3725 | yes |
 
 With a density of ~1.04 g/cm³, the volume is within a few percent of the EFW from 28
 weeks on, and ~10 % low at 20 weeks.
 
 ## Simulated ultrasound (22 weeks)
 
-`feto-eco planos --eg 22`. Measurements on the label map of the simulated image:
+`feto-eco planos --eg 22` and `feto-eco cabeza --eg 22`. Measurements on the label map of
+the simulated image:
 
-| Measurement | Hadlock | On the image |
+| Measurement | Expected | On the image |
 |---|---|---|
 | HC | 201.3 mm | 201.3 mm |
 | BPD (outer–outer) | 52.9 mm | 52.9 mm |
-| AC | 172.9 mm | 172.6 mm |
+| AC | 172.9 mm | 172.9 mm |
 | FL | 38.4 mm | 40.4 mm (+5 %) |
+| TCD (transcerebellar) | 23.6 mm | 23.8 mm |
+| Cisterna magna | 5.1 mm | 5.3 mm |
+| Nasal bone (profile) | 7.3 mm | 7.3 mm |
+
+HC, BPD, AC and FL are compared with Hadlock; TCD, cisterna magna and nasal bone with the
+nomograms in [`cabeza.py`](modelo.en.md#face-and-posterior-fossa). The AC is measured after
+a morphological opening that detaches the arms when they touch the abdomen.
 
 FL measured on the image is consistently ~5 % long; the cause has not been identified yet.
 

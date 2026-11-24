@@ -50,8 +50,15 @@ from .comun import agregar_argumento, idioma_inicial, menu_idioma
 from ..vista3d import (a_pv_lista, abanico_3d, agregar_escena, malla_placenta, mallas_escena,
                      mallas_escena_np, sonda_3d)
 
-NOMBRES = {"transtalamico": N_("Transtalámico"), "cuatro_camaras": N_("Cuatro cámaras"),
-           "abdominal": N_("Abdominal (CA)"), "femur": N_("Fémur"), "sagital": N_("Sagital medio")}
+NOMBRES = {"transtalamico": N_("Transtalámico"), "transcerebelar": N_("Transcerebelar"),
+           "cuatro_camaras": N_("Cuatro cámaras"), "abdominal": N_("Abdominal (CA)"),
+           "femur": N_("Fémur"), "sagital": N_("Sagital medio"), "perfil": N_("Perfil"),
+           "nariz_labios": N_("Nariz y labios")}
+# medida -> (nombre mostrado, clave en Feto.bio, fuente del valor esperado)
+MEDIDAS = {"CC": (N_("CC"), "CC", "Hadlock"), "DBP_ext": (N_("DBP"), "DBP", "Hadlock"),
+           "CA": (N_("CA"), "CA", "Hadlock"), "LF": (N_("LF"), "LF", "Hadlock"),
+           "DTC": (N_("DTC"), "DTC", N_("esperado")), "CM": (N_("CM"), "CM", N_("esperado")),
+           "HN": (N_("HN"), "HN", N_("esperado"))}
 TIPOS = {"convexa": N_("Convexa"), "lineal": N_("Lineal"),
          "sectorial": N_("Sectorial (phased array)")}
 CALIDAD = {"rápida": dict(n_lineas=128, dr_mm=0.2, px=0.5),
@@ -529,8 +536,8 @@ class Escaner(QMainWindow):
         if "medidas" in out:
             nom, med = out["medidas"]
             bio = out["escena"].feto.bio
-            ref = {"CC": bio["CC"], "DBP_ext": bio["DBP"], "CA": bio["CA"], "LF": bio["LF"]}
-            txt = ", ".join(f"{k} {v_:.1f} mm (Hadlock {ref[k]:.1f})" for k, v_ in med.items() if k in ref)
+            txt = ", ".join(f"{tr(MEDIDAS[k][0])} {v_:.1f} mm ({tr(MEDIDAS[k][2])} {bio[MEDIDAS[k][1]]:.1f})"
+                            for k, v_ in med.items() if k in MEDIDAS)
             self.lbl_medidas.setText(f"<b>{tr(NOMBRES[nom])}</b>: {txt or tr('sin medidas para este plano')}")
         self._redibujar_eco()
         self.mapa.update()

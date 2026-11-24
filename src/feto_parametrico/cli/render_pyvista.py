@@ -9,6 +9,7 @@ render_pyvista.py — Renders fuera de pantalla con PyVista/VTK.
     feto-render crecimiento -o crecimiento.mp4 --paso 0.5
     feto-render organos 22                    # organos_utero_22s.png
     feto-render organos 22 --sin-utero        # organos_22s.png
+    feto-render cara 16 24 32                 # cara.png: la cara de tres cuartos
 
 Licencia: GPL-3.0-or-later
 """
@@ -85,6 +86,31 @@ def biometria(eg, salida, resolucion):
     print(salida)
 
 
+def cara(edades, salida, resolucion):
+    """La cara de tres cuartos a varias edades, cada una encuadrada a su tamaño."""
+    from ..feto_pv import COLOR_PIEL
+    n = len(edades)
+    p = pv.Plotter(off_screen=True, window_size=(520 * n, 560), shape=(1, n), border=False,
+                   lighting="three lights")
+    for i, eg in enumerate(edades):
+        d = generar(eg, resolucion)
+        info = d["info"]
+        u = np.asarray(info["crown_dir"], float)
+        f = np.cross(u, [0.0, 1.0, 0.0]); f /= np.linalg.norm(f)
+        f = -f if f[0] < 0 else f
+        foco = info["p_cabeza"] + 0.25 * info["OFD"] / 2 * f - 0.30 * info["c_cabeza"] * u
+        lado = np.array([0.0, -1.0, 0.0])
+        pos = foco + 3.4 * info["OFD"] * (0.80 * f + 0.55 * lado + 0.20 * u)
+        p.subplot(0, i)
+        p.set_background(FONDO[0], top=FONDO[1])
+        p.add_mesh(d["pv"], color=COLOR_PIEL, smooth_shading=True, specular=0.25)
+        p.camera_position = [pos, foco, u]
+        p.camera.view_angle = 24
+        p.add_text(tr("{eg:g} sem", eg=eg), position="upper_left", font_size=14, color="#333333")
+    p.screenshot(salida)
+    print(salida)
+
+
 def giro(eg, salida, resolucion, cuadros=120, fps=30):
     """Vuelta completa alrededor del eje vertical."""
     d = generar(eg, resolucion)
@@ -153,6 +179,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="modo", required=True)
     a = sub.add_parser("serie"); a.add_argument("eg", type=float, nargs="+")
     a = sub.add_parser("biometria"); a.add_argument("eg", type=float)
+    a = sub.add_parser("cara"); a.add_argument("eg", type=float, nargs="+")
     a = sub.add_parser("giro"); a.add_argument("eg", type=float)
     a.add_argument("--cuadros", type=int, default=120)
     a = sub.add_parser("organos"); a.add_argument("eg", type=float)
@@ -171,6 +198,8 @@ def main(argv=None):
         serie(args.eg, args.salida or "serie_crecimiento.png", args.resolucion)
     elif args.modo == "biometria":
         biometria(args.eg, args.salida or f"biometria_{args.eg:g}s.png", args.resolucion)
+    elif args.modo == "cara":
+        cara(args.eg, args.salida or "cara.png", max(args.resolucion, 220))
     elif args.modo == "giro":
         giro(args.eg, args.salida or f"giro_{args.eg:g}s.mp4", args.resolucion, args.cuadros)
     elif args.modo == "organos":
