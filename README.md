@@ -21,7 +21,8 @@ Feto humano paramétrico por edad gestacional, con órganos y movimiento, dentro
 * **Movimiento**: patadas, sobresaltos, giros de cabeza, respiración y latido.
 * **Ecografía simulada** con máscaras de referencia: planos estándar (transtalámico, cuatro
   cámaras, abdominal, fémur, sagital, transcerebelar, perfil, nariz-labios), sondas
-  convexa, lineal y sectorial, medidas sobre la imagen, cines y lotes etiquetados para
+  convexa, lineal, sectorial y matricial (volumen 3D, cortes ortogonales, biplano y
+  render de la cara), medidas sobre la imagen, cines y lotes etiquetados para
   entrenamiento.
 * **Aplicaciones de escritorio** (PyQt6 + PyVista), en español e inglés: un visor del
   modelo y un simulador de exploración con sonda virtual o física.
@@ -97,6 +98,7 @@ Con el entorno virtual activado:
 | `feto-malla 20 -o feto20.stl` | malla de superficie (STL/OBJ/PLY) |
 | `feto-eco planos --eg 22` | figura de los planos estándar de biometría con medidas |
 | `feto-eco cabeza --eg 22` | transcerebelar, perfil y nariz-labios (DTC, CM, hueso nasal) |
+| `feto-eco volumen` | sonda matricial: cortes ortogonales y render 3D de la cara |
 | `feto-eco lote --n 200` | imágenes, etiquetas y JSON con biometría para entrenamiento |
 | `feto-render serie 12 20 28 36 40` | fetos a escala sobre una regla |
 | `feto-animacion --eg 22` | video 3D del feto moviéndose en el útero |

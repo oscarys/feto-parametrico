@@ -39,7 +39,7 @@ feto-escaner --eg 28 --udp     # with a physical probe or feto-sonda-emulador
 ![Scanning trainer](img/captura_escaner_en.png)
 
 * **Left:** top view of the abdomen (drag to move the probe, wheel to rotate it),
-  patient settings (GA, placenta, abdominal fat, fetal movement), scanner settings
+  patient settings (GA, placenta, abdominal fat, fetal back position, fetal movement), scanner settings
   (probe type, frequency, depth, gain, dynamic range, label overlay), and a table with the angle and
   distance from the current plane to each standard plane (green within 10° and 4 mm).
 * **Centre:** 3D scene with the probe and the image painted on its plane.
@@ -55,6 +55,15 @@ feto-escaner --eg 28 --udp     # with a physical probe or feto-sonda-emulador
 | N | probe perpendicular to the skin |
 | Space | freeze: high-quality image (256 lines) and measurements against Hadlock |
 | M | fetal movement on/off |
+| B | biplane on/off (matrix probe) |
+| V | acquire a volume (matrix probe) |
+
+With the **matrix** probe, *Biplane* (two images side by side, at 90°, and both planes in
+the 3D scene) and *Acquire volume* appear. After about 15 s a window opens with slices
+A, B and C, a crosshair (sliders or a click on a slice), label overlay and the surface
+render, which can be rotated with the mouse; *Threshold* and *Render box start* adjust
+the render. For the face, set the fetal back to 180° (face toward the probe) and use
+the *Profile* plane.
 
 The physical probe is described in [sonda_fisica.en.md](sonda_fisica.en.md).
 

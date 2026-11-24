@@ -18,6 +18,8 @@ Teclado (con la ventana activa; Mayús = pasos finos):
     N               sonda perpendicular a la piel
     Espacio         congelar / descongelar (al congelar: imagen de alta calidad y medidas)
     M               feto en movimiento sí/no
+    B               biplano sí/no (sonda matricial)
+    V               adquirir un volumen (sonda matricial)
 
 Licencia: GPL-3.0-or-later
 """
@@ -38,8 +40,9 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDockWidget, QD
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView)
 from pyvistaqt import QtInteractor
 
-from ..ecografia import (GEOMETRIAS, PLANOS, TIPOS_SONDA, Adquisicion, medir_en_imagen,
-                         plano_estandar, simular, sonda_tipo)
+from ..ecografia import (PLANOS, TIPOS_SONDA, Adquisicion, medir_en_imagen, plano_estandar,
+                         simular, sonda_tipo)
+from ..volumen import arriba_cabeza, caja_alrededor, pose_biplano, simular_volumen
 from ..feto3d import Escena, Materno, Postura
 from ..fuentes_sonda import PUERTO, FuenteUDP
 from ..i18n import N_, tr
@@ -60,7 +63,7 @@ MEDIDAS = {"CC": (N_("CC"), "CC", "Hadlock"), "DBP_ext": (N_("DBP"), "DBP", "Had
            "DTC": (N_("DTC"), "DTC", N_("esperado")), "CM": (N_("CM"), "CM", N_("esperado")),
            "HN": (N_("HN"), "HN", N_("esperado"))}
 TIPOS = {"convexa": N_("Convexa"), "lineal": N_("Lineal"),
-         "sectorial": N_("Sectorial (phased array)")}
+         "sectorial": N_("Sectorial (phased array)"), "matricial": N_("Matricial (volumen)")}
 CALIDAD = {"rápida": dict(n_lineas=128, dr_mm=0.2, px=0.5),
            "alta": dict(n_lineas=256, dr_mm=0.1, px=0.3)}
 
@@ -71,6 +74,29 @@ CALIDAD = {"rápida": dict(n_lineas=128, dr_mm=0.2, px=0.5),
 
 class _Senales(QObject):
     listo = pyqtSignal(object)
+
+
+class _SenalesVolumen(QObject):
+    avance = pyqtSignal(int, int)
+    listo = pyqtSignal(object)
+
+
+class _TrabajoVolumen(QRunnable):
+    """Barrido completo de la sonda matricial (unos 15 s)."""
+    def __init__(self, esc, pose, sonda, adq):
+        super().__init__()
+        self.args = (esc, pose, sonda, adq)
+        self.senales = _SenalesVolumen()
+
+    def run(self):
+        esc, pose, sonda, adq = self.args
+        try:
+            v = simular_volumen(esc, pose, sonda, adq, n_planos=97, voxel_mm=0.6,
+                                caja=caja_alrededor(pose, sonda),
+                                progreso=lambda k, n: self.senales.avance.emit(k, n))
+            self.senales.listo.emit({"volumen": v, "arriba": arriba_cabeza(esc, v)})
+        except Exception as e:                 # noqa: BLE001
+            self.senales.listo.emit({"error": repr(e)})
 
 
 class _Trabajo(QRunnable):
@@ -102,6 +128,11 @@ class _Trabajo(QRunnable):
                               etiquetas=True if p["calidad"] == "alta" else "rapidas")
                 out.update(res=res, sonda=sonda, adq=adq,
                            errores=errores_planos(esc, pose))
+                if p.get("biplano"):
+                    pose2 = pose_biplano(pose)
+                    out.update(pose2=pose2, res2=simular(
+                        esc, pose2, sonda, adq, normalizacion=res["normalizacion"],
+                        etiquetas=True if p["calidad"] == "alta" else "rapidas"))
                 if p.get("medir"):
                     mejor = min(out["errores"].items(), key=lambda kv: kv[1][0] + kv[1][1])[0]
                     out["medidas"] = (mejor, medir_en_imagen(res, mejor, adq.px_salida_mm,
@@ -230,7 +261,8 @@ class PanelEco(QLabel):
         self._pix = None
         self.setText(tr("Coloque la sonda sobre el abdomen"))
 
-    def mostrar(self, res, etiquetas=False, textos=()):
+    @staticmethod
+    def _rgb(res, etiquetas):
         b = (255 * np.clip(res["bmodo"], 0, 1)).astype(np.uint8)
         rgb = np.repeat(b[..., None], 3, axis=2)
         if etiquetas and "etiquetas" in res:
@@ -238,6 +270,16 @@ class PanelEco(QLabel):
             col = (255 * COLORES[np.clip(lab, 0, None)]).astype(np.uint8)
             m = (lab >= T["fetal"])[..., None]
             rgb = np.where(m, (0.55 * rgb + 0.45 * col).astype(np.uint8), rgb)
+        return rgb
+
+    def mostrar(self, res, etiquetas=False, textos=(), res2=None):
+        rgb = self._rgb(res, etiquetas)
+        if res2 is not None:                   # biplano: los dos planos lado a lado
+            rgb2 = self._rgb(res2, etiquetas)
+            h = max(rgb.shape[0], rgb2.shape[0])
+            pad = lambda a: np.pad(a, ((0, h - a.shape[0]), (0, 0), (0, 0)))  # noqa: E731
+            sep = np.full((h, max(4, rgb.shape[1] // 60), 3), 60, np.uint8)
+            rgb = np.hstack([pad(rgb), sep, pad(rgb2)])
         h, w0, _ = rgb.shape
         # imagen angosta (sonda lineal): bandas negras a los lados para textos y escala
         izq = max(0, (int(0.8 * h) - w0) // 2)
@@ -346,15 +388,21 @@ class Escaner(QMainWindow):
         self.cb_plac.currentTextChanged.connect(self._materno_cambio)
         self.sp_grasa = QSpinBox(); self.sp_grasa.setRange(4, 50); self.sp_grasa.setValue(12)
         self.sp_grasa.setSuffix(tr(" mm")); self.sp_grasa.editingFinished.connect(self._materno_cambio)
+        self.sp_dorso = QSpinBox(); self.sp_dorso.setRange(0, 345); self.sp_dorso.setSingleStep(15)
+        self.sp_dorso.setValue(135); self.sp_dorso.setSuffix("°"); self.sp_dorso.setWrapping(True)
+        self.sp_dorso.setToolTip(tr("0° dorso anterior, 90° a la izquierda materna, 180° posterior "
+                                    "(cara hacia la sonda)"))
+        self.sp_dorso.editingFinished.connect(self._materno_cambio)
         self.ch_mov = QCheckBox(tr("Feto en movimiento (M)"))
         self.ch_mov.toggled.connect(self._mov_toggled)
         f.addRow(tr("Edad gestacional"), self.sp_eg); f.addRow(tr("Placenta"), self.cb_plac)
-        f.addRow(tr("Grasa abdominal"), self.sp_grasa); f.addRow(self.ch_mov)
+        f.addRow(tr("Grasa abdominal"), self.sp_grasa); f.addRow(tr("Dorso fetal"), self.sp_dorso)
+        f.addRow(self.ch_mov)
         lay.addWidget(caja)
 
         caja = QGroupBox(tr("Equipo")); f = QFormLayout(caja)
         self.cb_tipo = QComboBox()
-        for g in GEOMETRIAS:
+        for g in TIPOS_SONDA:
             self.cb_tipo.addItem(tr(TIPOS[g]), g)
         self.cb_tipo.currentIndexChanged.connect(self._cambiar_tipo)
         f.addRow(tr("Tipo de sonda"), self.cb_tipo)
@@ -371,6 +419,15 @@ class Escaner(QMainWindow):
         for w in (self.desl_gan, self.desl_rd):
             w.valueChanged.connect(lambda _: self._pedir())
         self.ch_etq.toggled.connect(self._redibujar_eco)
+        fila_m = QHBoxLayout()
+        self.ch_biplano = QCheckBox(tr("Biplano (B)"))
+        self.ch_biplano.toggled.connect(lambda _: self._pedir())
+        self.btn_vol = QPushButton(tr("Adquirir volumen (V)"))
+        self.btn_vol.clicked.connect(self._adquirir_volumen)
+        fila_m.addWidget(self.ch_biplano); fila_m.addWidget(self.btn_vol)
+        self.fila_matricial = QWidget(); self.fila_matricial.setLayout(fila_m)
+        self.fila_matricial.setVisible(False)
+        f.addRow(self.fila_matricial)
         f.addRow(tr("Frecuencia"), self.sp_f0); f.addRow(tr("Profundidad"), self.sp_prof)
         f.addRow(tr("Ganancia"), self.desl_gan); f.addRow(tr("Rango dinámico"), self.desl_rd)
         f.addRow(self.ch_etq)
@@ -466,7 +523,8 @@ class Escaner(QMainWindow):
             self._nueva_escena()
 
     def _materno_cambio(self, *_):
-        self.materno = Materno(grasa_mm=self.sp_grasa.value(), placenta=self.cb_plac.currentData())
+        self.materno = Materno(grasa_mm=self.sp_grasa.value(), placenta=self.cb_plac.currentData(),
+                               dorso_grados=float(self.sp_dorso.value()))
         self._nueva_escena()
 
     # ........................................................... pedidos
@@ -490,6 +548,7 @@ class Escaner(QMainWindow):
                       postura=self.movimiento.en(t) if self.ch_mov.isChecked() else Postura(),
                       estado=EstadoSonda(self.estado.x, self.estado.y, self.estado.R.copy()),
                       calidad=calidad or "rápida", geometria=self.cb_tipo.currentData(),
+                      biplano=self._es_matricial() and self.ch_biplano.isChecked(),
                       f0=self.sp_f0.value(),
                       prof=self.sp_prof.value(), ganancia=self.desl_gan.value(),
                       rd=self.desl_rd.value(), mallas=mallas, medir=medir, t=t)
@@ -531,6 +590,12 @@ class Escaner(QMainWindow):
                    scalars="eco", cmap="gray", clim=(0, 1), show_scalar_bar=False,
                    name="abanico", lighting=False, render=False)
         v.add_mesh(sonda_3d(pose, out["sonda"]), color="#3b4252", name="sonda", render=False)
+        if "res2" in out:
+            v.add_mesh(abanico_3d(out["pose2"], out["sonda"], out["res2"], sub=2),
+                       scalars="eco", cmap="gray", clim=(0, 1), show_scalar_bar=False,
+                       name="abanico2", lighting=False, render=False)
+        else:
+            v.remove_actor("abanico2", render=False)
         v.render()
         self._tabla_errores(out["errores"])
         if "medidas" in out:
@@ -549,7 +614,7 @@ class Escaner(QMainWindow):
         textos = [tr("{eg:g} sem   {f0:.1f} MHz", eg=self.eg, f0=o["sonda"].f0_mhz)]
         if self.congelado:
             textos.append(tr("CONGELADA"))
-        self.eco.mostrar(o["res"], self.ch_etq.isChecked(), textos)
+        self.eco.mostrar(o["res"], self.ch_etq.isChecked(), textos, o.get("res2"))
 
     def _tabla_errores(self, err):
         for i, p in enumerate(PLANOS):
@@ -620,8 +685,12 @@ class Escaner(QMainWindow):
         self.sp_prof.blockSignals(False)
         self.mapa.update(); self._pedir()
 
+    def _es_matricial(self):
+        return self.cb_tipo.currentData() == "matricial"
+
     def _cambiar_tipo(self, *_):
         """Frecuencia y profundidad típicas del tipo de sonda elegido."""
+        self.fila_matricial.setVisible(self._es_matricial())
         t = TIPOS_SONDA[self.cb_tipo.currentData()]
         for sp, (val, lo, hi) in ((self.sp_f0, t["f0"]), (self.sp_prof, t["prof"])):
             sp.blockSignals(True)
@@ -629,6 +698,34 @@ class Escaner(QMainWindow):
             sp.setValue(val)
             sp.blockSignals(False)
         self._pedir()
+
+    # ......................................................... volumen
+    def _adquirir_volumen(self):
+        if not self._es_matricial() or self.ultimo is None or "res" not in self.ultimo:
+            return
+        if getattr(self, "_vol_en_curso", False):
+            return
+        o = self.ultimo
+        self._vol_en_curso = True
+        self.btn_vol.setEnabled(False)
+        t = _TrabajoVolumen(o["escena"], o["pose"], o["sonda"], o["adq"])
+        t.senales.avance.connect(lambda k, n: self.statusBar().showMessage(
+            tr("Adquiriendo volumen… {k}/{n} planos", k=k, n=n)))
+        t.senales.listo.connect(self._volumen_listo)
+        self.pool.start(t)
+
+    def _volumen_listo(self, out):
+        self._vol_en_curso = False
+        self.btn_vol.setEnabled(True)
+        if "error" in out:
+            self.statusBar().showMessage(tr("Error: {msg}", msg=out["error"]), 8000)
+            return
+        from .ventana_volumen import VentanaVolumen
+        self.statusBar().showMessage(tr("Volumen listo"), 3000)
+        w = VentanaVolumen(out["volumen"], out["arriba"], tr("{eg:g} sem", eg=self.eg))
+        self.ventanas_volumen = [x for x in getattr(self, "ventanas_volumen", []) if x.isVisible()]
+        self.ventanas_volumen.append(w)
+        w.show()
 
     def _congelar(self):
         self.congelado = not self.congelado
@@ -728,6 +825,10 @@ class Escaner(QMainWindow):
             self._perpendicular()
         elif k == Qt.Key.Key_M:
             self.ch_mov.toggle()
+        elif k == Qt.Key.Key_B and self._es_matricial():
+            self.ch_biplano.toggle()
+        elif k == Qt.Key.Key_V:
+            self._adquirir_volumen()
         else:
             super().keyPressEvent(ev)
 

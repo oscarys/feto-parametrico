@@ -45,6 +45,7 @@ ajusta a la profundidad del objetivo.
 | `convexa` | abanico desde un arco de 50 mm de radio, 70° | sector con la parte superior curva | 3.5 MHz (2–6) | 160 mm (80–240) | exploración obstétrica de rutina |
 | `lineal` | paralelas, repartidas en 40 mm | rectángulo | 7.5 MHz (5–12) | 70 mm (30–120) | estructuras cercanas a la pared: embarazo temprano, detalle superficial |
 | `sectorial` | abanico desde una huella casi puntual, 90° | sector con vértice | 3.0 MHz (2–5) | 150 mm (60–240) | ventana acústica pequeña; ecocardiografía |
+| `matricial` | como la convexa (radio 40 mm), más 60° en elevación | sector; volumen y biplano | 3.5 MHz (2–6) | 160 mm (80–240) | ecografía 3D/4D: cara, cortes ortogonales |
 
 La lineal ve con más detalle (frecuencia alta: PSF más fina), pero la atenuación crece
 con la frecuencia y no llega lejos: en la figura, con el mismo plano a 16 semanas, el
@@ -52,6 +53,29 @@ cráneo apenas asoma por debajo de la pared materna, entre el ruido. La sectoria
 entra por una ventana pequeña a costa de un campo cercano estrecho.
 
 ![El plano transtalámico a 16 semanas con sonda convexa, lineal y sectorial](img/sondas_16s.png)
+
+## Sonda matricial: volumen y biplano
+
+La sonda `matricial` (2D array) da la misma imagen que una convexa y, además, barre un
+abanico de 60° en elevación. `volumen.simular_volumen` simula 97 planos inclinados
+alrededor del eje lateral de la sonda (en paralelo, con la misma escala de grises que
+el plano central) y los remuestrea a una rejilla cartesiana de 0.6 mm en una caja
+alrededor del objetivo, con su volumen de etiquetas. Tarda unos 15 s.
+
+* **Cortes ortogonales (MPR):** A, el plano de la imagen; B, el plano de elevación
+  (perpendicular a A, con el mismo haz central); C, un corte coronal a profundidad fija.
+  Se cruzan en un punto que se mueve con deslizadores o con un clic.
+* **Render de superficie:** el volumen se suaviza (como el filtro de los equipos), se
+  recorta por delante con una caja de render que empieza en el líquido amniótico frente
+  al objetivo, y se dibuja con opacidad nula para lo oscuro (líquido) y opaca para el
+  tejido, en tono sepia. Umbral e inicio de la caja se ajustan.
+* **Biplano:** dos planos en vivo a 90° que comparten el haz central
+  (`volumen.pose_biplano`), con la misma escala de grises.
+
+Para ver la cara, el feto tiene que mirar a la sonda: en la figura, dorso posterior
+(180°) y la cabeza algo extendida.
+
+![Sonda matricial a 26 semanas: cortes A, B y C y render de la cara](img/volumen_perfil_26s.png)
 
 ## Planos estándar
 
@@ -105,6 +129,7 @@ feto-eco combinado --eg 22     # 3D + ecografía con la sonda fija y el feto mov
 feto-eco lote --n 200          # imágenes, etiquetas y JSON para entrenamiento
 feto-eco planos --sonda lineal # los planos de biometría con otra sonda (lineal o sectorial)
 feto-eco sondas                # un plano con las tres sondas (16 semanas por omisión)
+feto-eco volumen               # sonda matricial: cortes A, B, C y render de la cara (26 semanas)
 feto-eco planos --eg 22 --idioma en   # la figura con textos en inglés
 ```
 

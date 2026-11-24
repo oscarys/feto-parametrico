@@ -58,6 +58,7 @@ class Sonda:
     sigma_axial_mm: float = 0.25        # a 3.5 MHz; escala como 1/f0
     sigma_lat_foco_mm: float = 0.75
     crecimiento_lat: float = 0.022      # mm de sigma por mm fuera del foco
+    apertura_elev_grados: float = 0.0   # sonda matricial: abanico en elevación (0 = 2D)
     tgc_max_db: float | None = None     # tope de la TGC automática (None: sin tope); con
                                         # frecuencias altas evita que el ruido amplificado
                                         # llene lo que está fuera del alcance de la sonda
@@ -85,12 +86,18 @@ TIPOS_SONDA = {
                    f0=(7.5, 5.0, 12.0), prof=(70, 30, 120)),
     "sectorial": dict(sonda=dict(geometria="sectorial", radio_mm=1.0, apertura_grados=90.0),
                       f0=(3.0, 2.0, 5.0), prof=(150, 60, 240)),
+    # matricial (2D array) convexa: imagen como una convexa y, además, volumen y biplano
+    "matricial": dict(sonda=dict(geometria="convexa", radio_mm=40.0, apertura_grados=70.0,
+                                 apertura_elev_grados=60.0),
+                      f0=(3.5, 2.0, 6.0), prof=(160, 80, 240)),
 }
+TIPOS = tuple(TIPOS_SONDA)
 
 
-def sonda_tipo(geometria: str = "convexa", **kw) -> Sonda:
-    """Sonda con los valores típicos de su tipo; `kw` sustituye cualquier campo."""
-    t = TIPOS_SONDA[geometria]
+def sonda_tipo(tipo: str = "convexa", **kw) -> Sonda:
+    """Sonda con los valores típicos de su tipo (clave de TIPOS_SONDA); `kw` sustituye
+    cualquier campo."""
+    t = TIPOS_SONDA[tipo]
     base = dict(t["sonda"], f0_mhz=t["f0"][0], profundidad_mm=float(t["prof"][0]),
                 foco_mm=0.5 * t["prof"][0])
     base.update(kw)
@@ -231,7 +238,11 @@ def _evaluar_plano(esc, pose, X, Z, elev=0.0):
 # ---------------------------------------------------------------------------
 
 def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = Adquisicion(),
-            semilla: int = 0, etapas: bool = False, etiquetas: bool = True):
+            semilla: int = 0, etapas: bool = False, etiquetas: bool = True,
+            normalizacion: dict | None = None, semilla_ruido: int | None = None):
+    """Imagen modo B del plano de la pose. `normalizacion` (res["normalizacion"] de otra
+    imagen) fija el nivel de ruido, la TGC y la referencia de brillo: así los planos de
+    un volumen o de un biplano comparten la misma escala de grises."""
     u, d, X, Z = malla_haz(sonda)
     du, dr, f0 = u[1] - u[0], sonda.dr_mm, sonda.f0_mhz
     lat = paso_lateral(sonda, u, d)             # mm entre líneas vecinas, por profundidad
@@ -282,11 +293,13 @@ def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = 
     rf = out
 
     # receptor
-    rng = np.random.default_rng(semilla + 1)
-    ref0 = np.percentile(np.abs(rf), 99.0)
+    rng = np.random.default_rng(semilla + 1 if semilla_ruido is None else semilla_ruido)
+    ref0 = normalizacion["ref0"] if normalizacion else np.percentile(np.abs(rf), 99.0)
     rf = rf + ref0 * 10 ** (adq.ruido_db / 20) * (rng.standard_normal(rf.shape)
                                                  + 1j * rng.standard_normal(rf.shape)) / np.sqrt(2)
-    if adq.tgc_auto:
+    if normalizacion:
+        tgc_np = np.interp(prof, normalizacion["prof"], normalizacion["tgc_np"])
+    elif adq.tgc_auto:
         # perfil de pérdida típico a cada profundidad (la mediana ignora sombras aisladas);
         # en el líquido amniótico no crece, así que no amplifica el ruido
         tgc_np = np.median(acum, axis=0)
@@ -296,7 +309,7 @@ def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = 
         tgc_np = np.minimum(tgc_np, sonda.tgc_max_db / 8.686)
     tgc = np.exp(tgc_np)[None, :]
     env = np.abs(rf) * tgc
-    ref = np.percentile(env, 99.5)
+    ref = normalizacion["ref"] if normalizacion else np.percentile(env, 99.5)
     db = 20 * np.log10(env / ref + 1e-12) + adq.ganancia_db
     bmodo_haz = np.clip((db + adq.rango_dinamico_db) / adq.rango_dinamico_db, 0.0, 1.0)
 
@@ -304,6 +317,8 @@ def simular(esc: Escena, pose: Pose, sonda: Sonda = Sonda(), adq: Adquisicion = 
     bmodo, dentro = conversion(bmodo_haz, sonda, u, d, Xc, Zc)
     res = dict(bmodo=bmodo.astype(np.float32), dentro=dentro, xs=xs, zs=zs,
                bmodo_haz=bmodo_haz.astype(np.float32), u=u, d=d,
+               normalizacion=dict(ref0=float(ref0), ref=float(ref), prof=prof,
+                                  tgc_np=np.asarray(tgc_np, float)),
                extent=(xs[0], xs[-1] + adq.px_salida_mm, zs[-1] + adq.px_salida_mm, zs[0]))
     if etiquetas == "rapidas":          # vecino más cercano desde la malla del haz
         lab, _ = conversion(etq.astype(float), sonda, u, d, Xc, Zc, orden=0, relleno=-1)
@@ -409,8 +424,8 @@ def plano_estandar(esc: Escena, nombre: str, **kw) -> Pose:
 
 
 def sonda_para(pose: Pose, margen_mm: float = 65.0, geometria: str = "convexa", **kw) -> Sonda:
-    """Sonda del tipo dado con la profundidad ajustada a la del objetivo (dentro del
-    intervalo del tipo; una lineal no llega a objetivos profundos)."""
+    """Sonda del tipo dado (clave de TIPOS_SONDA) con la profundidad ajustada a la del
+    objetivo (dentro del intervalo del tipo; una lineal no llega a objetivos profundos)."""
     objetivo = float(pose.info.get("profundidad_objetivo", 80.0))
     _, pmin, pmax = TIPOS_SONDA[geometria]["prof"]
     prof = float(np.clip(objetivo + margen_mm, max(pmin, 90.0 if geometria != "lineal" else pmin), pmax))

@@ -21,8 +21,9 @@ inside a uterus, and a simulator of B-mode obstetric ultrasound for training.
 * **Movement**: kicks, startles, head turns, breathing and heartbeat.
 * **Simulated ultrasound** with ground truth: standard planes (transthalamic,
   four-chamber, abdominal, femur, midsagittal, transcerebellar, profile, nose-and-lips),
-  convex, linear and sector probes, measurements on the image, cine loops and labelled
-  batches for training.
+  convex, linear, sector and matrix probes (3D volume, orthogonal slices, biplane and
+  face render), measurements on the image, cine loops and labelled batches for
+  training.
 * **Desktop applications** (PyQt6 + PyVista), in Spanish and English: a viewer of the
   model and a scanning trainer driven by a virtual or physical probe.
 
@@ -99,6 +100,7 @@ With the virtual environment activated:
 | `feto-malla 20 -o feto20.stl` | surface mesh (STL/OBJ/PLY) |
 | `feto-eco planos --eg 22` | figure of the standard biometry planes with measurements |
 | `feto-eco cabeza --eg 22` | transcerebellar, profile and nose-and-lips (TCD, CM, nasal bone) |
+| `feto-eco volumen` | matrix probe: orthogonal slices and 3D render of the face |
 | `feto-eco lote --n 200` | images, label maps and JSON with biometry for training |
 | `feto-render serie 12 20 28 36 40` | fetuses to scale over a ruler |
 | `feto-animacion --eg 22` | 3D video of the fetus moving in the uterus |

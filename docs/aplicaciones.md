@@ -38,8 +38,8 @@ feto-escaner --eg 28 --udp     # con sonda física o con feto-sonda-emulador
 ![Simulador de exploración en el plano de cuatro cámaras](img/captura_escaner.png)
 
 * **Izquierda:** mapa del abdomen visto desde arriba (arrastrar = mover la sonda,
-  rueda = girarla), parámetros de la paciente (EG, placenta, grasa abdominal, feto en
-  movimiento) y del equipo (tipo de sonda, frecuencia, profundidad, ganancia, rango
+  rueda = girarla), parámetros de la paciente (EG, placenta, grasa abdominal, posición del
+  dorso fetal, feto en movimiento) y del equipo (tipo de sonda, frecuencia, profundidad, ganancia, rango
   dinámico, superponer etiquetas), y una tabla con el ángulo y la distancia del plano actual a
   cada plano estándar (verde dentro de 10° y 4 mm).
 * **Centro:** escena 3D con la sonda y la imagen pintada sobre su plano.
@@ -55,6 +55,15 @@ feto-escaner --eg 28 --udp     # con sonda física o con feto-sonda-emulador
 | N | sonda perpendicular a la piel |
 | Espacio | congelar: imagen de alta calidad (256 líneas) y medidas frente a Hadlock |
 | M | feto en movimiento sí/no |
+| B | biplano sí/no (sonda matricial) |
+| V | adquirir un volumen (sonda matricial) |
+
+Con la sonda **matricial** aparecen *Biplano* (dos imágenes lado a lado, a 90°, y los dos
+planos en la escena 3D) y *Adquirir volumen*: tras unos 15 s se abre una ventana con
+los cortes A, B y C, un punto de cruce (deslizadores o clic en un corte), etiquetas
+superpuestas y el render de superficie, que se puede girar con el ratón; *Umbral* e
+*Inicio de la caja* ajustan el render. Para la cara conviene el dorso fetal a 180°
+(la cara hacia la sonda) y el plano *Perfil*.
 
 La sonda física se describe en [sonda_fisica.md](sonda_fisica.md).
 

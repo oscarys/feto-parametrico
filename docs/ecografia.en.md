@@ -45,6 +45,7 @@ the target depth.
 | `convexa` (convex) | fan from a 50 mm radius arc, 70° | sector with a curved top | 3.5 MHz (2–6) | 160 mm (80–240) | routine obstetric scanning |
 | `lineal` (linear) | parallel, spread over 40 mm | rectangle | 7.5 MHz (5–12) | 70 mm (30–120) | structures close to the wall: early pregnancy, superficial detail |
 | `sectorial` (sector, phased array) | fan from an almost point-like footprint, 90° | sector with an apex | 3.0 MHz (2–5) | 150 mm (60–240) | small acoustic window; echocardiography |
+| `matricial` (matrix) | like the convex probe (40 mm radius), plus 60° in elevation | sector; volume and biplane | 3.5 MHz (2–6) | 160 mm (80–240) | 3D/4D ultrasound: face, orthogonal slices |
 
 The linear probe shows finer detail (higher frequency, finer PSF), but attenuation grows
 with frequency and it does not reach far: in the figure, with the same plane at 16
@@ -52,6 +53,29 @@ weeks, the skull barely shows below the maternal wall, among the noise. The sect
 gets in through a small window at the cost of a narrow near field.
 
 ![The transthalamic plane at 16 weeks with convex, linear and sector probes](img/sondas_16s_en.png)
+
+## Matrix probe: volume and biplane
+
+The `matricial` (matrix, 2D array) probe gives the same image as a convex probe and
+also sweeps a 60° fan in elevation. `volumen.simular_volumen` simulates 97 planes tilted
+about the probe's lateral axis (in parallel, with the central plane's grey scale) and
+resamples them onto a 0.6 mm Cartesian grid in a box around the target, together with
+its label volume. It takes about 15 s.
+
+* **Orthogonal slices (MPR):** A, the image plane; B, the elevation plane
+  (perpendicular to A, sharing the central beam); C, a coronal slice at fixed depth.
+  They cross at a point moved with sliders or a click.
+* **Surface render:** the volume is smoothed (like a scanner's filter), clipped in front
+  by a render box that starts in the amniotic fluid in front of the target, and drawn
+  transparent for dark voxels (fluid) and opaque for tissue, in sepia. Threshold and box
+  start are adjustable.
+* **Biplane:** two live planes at 90° sharing the central beam
+  (`volumen.pose_biplano`), on the same grey scale.
+
+To see the face, the fetus has to face the probe: in the figure, back posterior (180°)
+and the head slightly extended.
+
+![Matrix probe at 26 weeks: slices A, B and C and render of the face](img/volumen_perfil_26s_en.png)
 
 ## Standard planes
 
@@ -107,6 +131,7 @@ feto-eco combinado --eg 22     # 3D + ultrasound with a fixed probe and a moving
 feto-eco lote --n 200          # images, label maps and JSON for training
 feto-eco planos --sonda lineal # the biometry planes with another probe (lineal or sectorial)
 feto-eco sondas                # one plane with all three probes (16 weeks by default)
+feto-eco volumen               # matrix probe: slices A, B, C and render of the face (26 weeks)
 feto-eco planos --eg 22 --idioma en   # the figure with English text
 ```
 

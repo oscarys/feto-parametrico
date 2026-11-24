@@ -11,6 +11,7 @@ ecografía simulada.
     feto-eco lote --n 32        # imágenes + etiquetas + JSON para entrenamiento
     feto-eco planos --sonda lineal   # con sonda lineal (o sectorial)
     feto-eco sondas           # un plano con las tres sondas (16 semanas por omisión)
+    feto-eco volumen          # sonda matricial: cortes ortogonales y render de la cara
 
 Licencia: GPL-3.0-or-later
 """
@@ -184,6 +185,58 @@ def cine_latido(eg=22.0, salida=None, fps=20, duracion=2.0):
     print(salida)
 
 
+def figura_volumen(eg=26.0, salida=None, plano="perfil", flexion=-5.0, dorso=180.0,
+                   n_planos=97, umbral=0.5, semilla=0):
+    """Sonda matricial: los tres cortes ortogonales (MPR) y el render de superficie.
+
+    Por omisión el feto tiene el dorso hacia atrás y la cabeza algo extendida, con la
+    cara hacia la sonda (la posición que se espera para una ecografía 3D de la cara)."""
+    from ..volumen import (agregar_render, arriba_cabeza, caja_alrededor, camara_desde_sonda,
+                           simular_volumen)
+    salida = salida or f"volumen_{plano}_{eg:g}s.png"
+    esc = Escena(eg, Postura(flex_cabeza=flexion), mat=Materno(dorso_grados=dorso))
+    pose = plano_estandar(esc, plano)
+    sonda = sonda_para(pose, geometria="matricial", n_lineas=128, dr_mm=0.2)
+    v = simular_volumen(esc, pose, sonda, n_planos=n_planos, voxel_mm=0.6,
+                        caja=caja_alrededor(pose, sonda), semilla=semilla)
+    # render (VTK fuera de pantalla)
+    p = pv.Plotter(off_screen=True, window_size=(900, 900))
+    p.set_background("black")
+    agregar_render(p, v, umbral=umbral)
+    camara_desde_sonda(p, v, arriba=arriba_cabeza(esc, v))
+    tmp = "/tmp/_render_volumen.png"
+    p.screenshot(tmp)
+    p.close()
+
+    obj = float(pose.info["profundidad_objetivo"])
+    iz, iy, ix = v.indice(0.0, 0.0, obj)
+    c = v.cortes(iz, iy, ix)
+    x, y, z = v.x, v.y, v.z
+    fig, ax = plt.subplots(2, 2, figsize=(13, 12.5), facecolor="black")
+    vistas = [(ax[0, 0], c["A"], (x[0], x[-1], z[-1], z[0]), tr("A: plano de la imagen"),
+               (x[ix], z[iz])),
+              (ax[0, 1], c["B"], (y[0], y[-1], z[-1], z[0]), tr("B: plano de elevación"),
+               (y[iy], z[iz])),
+              (ax[1, 0], c["C"], (x[0], x[-1], y[-1], y[0]), tr("C: corte coronal (profundidad fija)"),
+               (x[ix], y[iy]))]
+    for a, img, ext, titulo, (cx, cy) in vistas:
+        a.imshow(img, cmap="gray", vmin=0, vmax=1, extent=ext)
+        a.axhline(cy, color="#ffcc00", lw=0.6, alpha=0.7)
+        a.axvline(cx, color="#ffcc00", lw=0.6, alpha=0.7)
+        a.set_title(titulo, color="white", fontsize=13)
+    ax[1, 1].imshow(imageio.imread(tmp)); ax[1, 1].set_axis_off()
+    ax[1, 1].set_title(tr("Render de superficie"), color="white", fontsize=13)
+    for a in ax.ravel()[:3]:
+        a.set_facecolor("black"); a.tick_params(colors="0.7", labelsize=8)
+    fig.suptitle(tr("{eg:g} semanas, sonda matricial: {n} planos en {ap:g}° de elevación (mm)",
+                    eg=eg, n=n_planos, ap=sonda.apertura_elev_grados), color="white", fontsize=14)
+    plt.tight_layout()
+    plt.savefig(salida, dpi=80, facecolor="black")
+    plt.close(fig)
+    print(salida)
+    return v
+
+
 def video_combinado(eg=22.0, salida=None, fps=8, duracion=6.0, plano="sagital"):
     """Izquierda: escena 3D con el abanico; derecha: la ecografía. Sonda fija."""
     salida = salida or f"combinado_{plano}_{eg:g}s.mp4"
@@ -259,13 +312,14 @@ def lote(n=32, carpeta="lote_eco", semilla=0, eg_rango=(18, 34), geometria="conv
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("modo", choices=["planos", "cabeza", "sondas", "latido", "combinado", "lote"])
+    ap.add_argument("modo", choices=["planos", "cabeza", "sondas", "volumen", "latido", "combinado",
+                                     "lote"])
     ap.add_argument("--eg", type=float, default=None,
-                    help=tr("semanas (por omisión 22; 16 en el modo sondas)"))
+                    help=tr("semanas (por omisión 22; 16 en el modo sondas, 26 en volumen)"))
     ap.add_argument("--plano", default=None, choices=PLANOS,
-                    help=tr("plano (por omisión sagital; transtalamico en el modo sondas)"))
+                    help=tr("plano (por omisión sagital; transtalamico en sondas, perfil en volumen)"))
     ap.add_argument("--n", type=int, default=32)
-    ap.add_argument("--sonda", default="convexa", choices=GEOMETRIAS,
+    ap.add_argument("--sonda", default="convexa", choices=tuple(TIPOS_SONDA),
                     help=tr("tipo de sonda (modos planos y lote)"))
     ap.add_argument("-o", "--salida")
     agregar_idioma(ap)
@@ -273,6 +327,9 @@ def main(argv=None):
     fijar_idioma(a.idioma)
     if a.modo == "sondas":
         figura_sondas(a.eg or 16.0, a.salida, plano=a.plano or "transtalamico")
+        return
+    if a.modo == "volumen":
+        figura_volumen(a.eg or 26.0, a.salida, plano=a.plano or "perfil")
         return
     eg = a.eg or 22.0
     if a.modo == "planos":
