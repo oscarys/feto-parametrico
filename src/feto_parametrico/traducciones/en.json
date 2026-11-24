@@ -137,7 +137,6 @@
   "Ventrículo lateral": "Lateral ventricle",
   "Visualización": "Display",
   "Volumen de la malla": "Mesh volume",
-  "Vóxeles en el eje más largo. Más = más fino y más lento.": "Voxels along the longest axis. More = finer and slower.",
   "anterior": "anterior",
   "caudal": "caudal",
   "contorno cefálico (CC)": "head circumference (HC)",
@@ -229,5 +228,6 @@
   "Tráquea": "Trachea",
   "Vejiga y arterias umbilicales": "Bladder and umbilical arteries",
   "Vena cava superior": "Superior vena cava",
-  "{eg:g} semanas   |   fila 2: ecografía simulada; fila 3: etiquetas (máscaras de referencia)": "{eg:g} weeks   |   row 2: simulated ultrasound; row 3: labels (ground truth)"
+  "{eg:g} semanas   |   fila 2: ecografía simulada; fila 3: etiquetas (máscaras de referencia)": "{eg:g} weeks   |   row 2: simulated ultrasound; row 3: labels (ground truth)",
+  "Vóxeles en el eje más largo. Junto a la piel la rejilla es el doble de fina (dedos, ortejos y cara). Más = más fino y más lento.": "Voxels along the longest axis. Next to the skin the grid is twice as fine (fingers, toes and face). More = finer and slower."
 }

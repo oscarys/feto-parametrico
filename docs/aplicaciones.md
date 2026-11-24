@@ -26,6 +26,9 @@ feto-visor 34
 * Biometría superpuesta (plano y contorno de la CC, DBP, ejes femorales), color por
   curvatura media, opacidad, aristas, reglas en mm, vistas predefinidas (menú *Vista*).
 * Tabla con la biometría de Hadlock frente a lo medido en la malla, volumen y PFE.
+* **Vóxeles** (grupo *Visualización*): tamaño de la rejilla gruesa (130 por omisión).
+  Junto a la piel la rejilla es el doble de fina, así que dedos, ortejos y rasgos de la
+  cara se ven desde el valor por omisión; subirlo afina todo a costa de tiempo.
 * Exportar a STL/OBJ/PLY/VTP; captura PNG al doble de resolución.
 
 ## feto-escaner

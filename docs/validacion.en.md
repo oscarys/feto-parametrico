@@ -7,18 +7,18 @@ Everything on this page can be reproduced with the commands given; the automated
 
 ## Surface
 
-`feto-malla 12 20 28 36 40 --informe -r 180`. HC and BPD are measured on an axial section
+`feto-malla 12 20 28 36 40 --informe -r 180` (with the grid refined next to the skin). HC and BPD are measured on an axial section
 of the head, subtracting the scalp (outer edge of the skull, as in Hadlock). CRL = approximate
 crown-rump length; EFW = estimated fetal weight (Hadlock 1985).
 
 | GA (weeks) | BPD Hadlock → mesh (mm) | HC Hadlock → mesh (mm) | CRL (mm) | Volume (cm³) | EFW (g) | Watertight |
 |---|---|---|---|---|---|---|
 | 12 | 17.3 → 17.2 | 68.0 → 67.1 | 52 | 12 | (out of range) | yes |
-| 20 | 46.3 → 45.8 | 176.8 → 174.8 | 154 | 294 | 336 | yes |
-| 28 | 70.6 → 69.8 | 266.1 → 263.0 | 242 | 1191 | 1230 | yes |
-| 36 | 88.3 → 87.4 | 327.9 → 324.2 | 314 | 2711 | 2828 | yes |
-| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3160 | 3280 | yes |
-| 40 | 94.2 → 93.1 | 346.1 → 342.2 | 344 | 3624 | 3725 | yes |
+| 20 | 46.3 → 45.8 | 176.8 → 174.8 | 154 | 296 | 336 | yes |
+| 28 | 70.6 → 69.8 | 266.1 → 263.1 | 242 | 1195 | 1230 | yes |
+| 36 | 88.3 → 87.4 | 327.9 → 324.3 | 314 | 2720 | 2828 | yes |
+| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3171 | 3280 | yes |
+| 40 | 94.2 → 93.1 | 346.1 → 342.3 | 344 | 3637 | 3725 | yes |
 
 With a density of ~1.04 g/cm³, the volume is within a few percent of the EFW from 28
 weeks on, and ~10 % low at 20 weeks.

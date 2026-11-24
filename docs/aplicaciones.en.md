@@ -27,6 +27,9 @@ feto-visor 34 --idioma en
 * Biometry overlay (HC plane and outline, BPD, femur axes), mean-curvature coloring,
   opacity, mesh edges, rulers in mm, preset views (*View* menu).
 * Table with the Hadlock biometry against the measurements on the mesh, volume and EFW.
+* **Voxels** (*Display* group): size of the coarse grid (130 by default). Next to the
+  skin the grid is twice as fine, so fingers, toes and facial features show from the
+  default value; raising it refines everything at the cost of time.
 * Export to STL/OBJ/PLY/VTP; PNG screenshots at twice the resolution.
 
 ## feto-escaner

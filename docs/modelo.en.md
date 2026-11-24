@@ -41,7 +41,7 @@ and is used to check the mesh volume.
 | Limbs | rounded cones; femur with 0.04·FL of cartilage at each end (the ossified shaft measures FL); tibia, humerus and ulna proportional to FL |
 | Hands and feet | palm with four slightly spread three-phalanx fingers and a two-phalanx thumb, closed with `Postura.puno` (0 open, 1 fist); foot with heel, sole and five fanned toes (`extremidades.py`, shared with the 3D scene) |
 | Foot | heel to toe = FL (FL/foot ratio = 1 throughout gestation) |
-| Surface | smooth union of signed distance functions (SDF) → marching cubes → largest connected component → Taubin smoothing |
+| Surface | smooth union of signed distance functions (SDF) → marching cubes → largest connected component → Taubin smoothing. Next to the skin the grid is twice as fine (`refinar=2`): the exact SDF is computed only within two voxels of the skin and interpolated elsewhere, so fingers and toes appear without paying for a full fine grid |
 
 ![Fetuses from 12 to 40 weeks at true scale](img/serie_crecimiento_en.png)
 
@@ -95,6 +95,18 @@ Reference measurements: TCD from `GA = 0.557·TCD + 8.84`
 18 weeks to 7.6 mm at 23 ([doi:10.1515/jpm-2014-0296](https://doi.org/10.1515/jpm-2014-0296)),
 prenasal thickness 0.61 × nasal bone ([PubMed 21584886](https://pubmed.ncbi.nlm.nih.gov/21584886/));
 cisterna magna 2.5 + 0.12·GA mm, within the normal 2–10 mm range.
+
+The width of the face is not a fixed fraction of the skull: it is set by the binocular
+(`BOD = 2.590 + 1.420·GA`) and interocular (`IOD = 2.304 + 0.510·GA`) distances of 595
+fetuses from 15 to 40 weeks (*Fetal ocular distance in normal pregnancies*), which agree
+with the MRI values of [Velasco-Annis et al. 2015](https://doi.org/10.1002/pd.4558)
+(BOD 30.8 mm at 20 weeks). They give the spacing and size of the eyes, and eyelids,
+cheeks, nose, lips, mouth, maxilla and mandible scale with them. Since BOD grows more
+slowly than BPD, the face is relatively wider at mid-gestation than at term. The mandible
+(temporomandibular joint to symphysis) follows Otto and Platt 1991:
+`ML = −2.41 + 0.297·GA − 0.0027·GA²` cm. Eyes and eyelids are placed under the actual
+skin (face or skull, whichever is further forward), with the eyelid half a millimetre
+proud.
 
 ![The face in three-quarter view at 16, 24 and 32 weeks](img/cara_en.png)
 

@@ -222,8 +222,9 @@ measures exactly FL; foot length equals FL (FL/foot ratio of 1, see
 `Proporciones`.
 
 **Geometry.** The body is a smooth union of signed distance functions (ellipsoids and
-rounded cones); the surface is extracted with marching cubes, reduced to its largest
-connected component and Taubin-smoothed. In the 3D scene every point receives a tissue
+rounded cones); the surface is extracted with marching cubes (on a grid twice as fine
+next to the skin, so fingers and toes show), reduced to its largest connected component
+and Taubin-smoothed. In the 3D scene every point receives a tissue
 label, a body part and local coordinates.
 
 **Ultrasound.** A ray/convolution model: tissue-anchored speckle (it moves with the

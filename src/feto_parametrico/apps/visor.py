@@ -145,7 +145,8 @@ class VisorFeto(QMainWindow):
         f = QFormLayout(caja)
         self.sp_res = QSpinBox(); self.sp_res.setRange(60, 280); self.sp_res.setSingleStep(20)
         self.sp_res.setValue(130); self.sp_res.setSuffix(tr(" vóxeles"))
-        self.sp_res.setToolTip(tr("Vóxeles en el eje más largo. Más = más fino y más lento."))
+        self.sp_res.setToolTip(tr("Vóxeles en el eje más largo. Junto a la piel la rejilla es el "
+                                  "doble de fina (dedos, ortejos y cara). Más = más fino y más lento."))
         self.sp_res.editingFinished.connect(self._solicitar)
         self.cb_color = QComboBox(); self.cb_color.addItems([tr("Piel"), tr("Curvatura media")])
         self.cb_color.currentIndexChanged.connect(self._programar)

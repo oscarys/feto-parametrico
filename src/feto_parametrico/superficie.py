@@ -404,24 +404,50 @@ def _caja(piezas):
 
 
 def evaluar_sdf(P, piezas):
-    d = None
+    """Distancia con signo a la piel. Cada pieza sólo se evalúa dentro de su caja
+    (ampliada por su radio de unión): lejos de ella no cambia la unión suave, y así
+    los dedos y la cara, con muchas piezas pequeñas, no encarecen todo el volumen."""
+    d = np.full(len(P), 1e6, np.float32)
     for p in piezas:
+        lo, hi = _caja([p])
+        m = 2 * p.k + 3.0
+        sel = np.flatnonzero(np.all((P >= lo - m) & (P <= hi + m), axis=1))
+        if not len(sel):
+            continue
+        Q = P[sel]
         if p.tipo == "elipsoide":
-            di = sdf_elipsoide(P, **p.params)
+            di = sdf_elipsoide(Q, **p.params)
         else:
-            di = sdf_cono_redondeado(P, **p.params)
+            di = sdf_cono_redondeado(Q, **p.params)
         if p.corte is not None:
-            di = recortar(di, P, p.corte)
+            di = recortar(di, Q, p.corte)
         if p.resta:
-            d = resta_suave(d, di, p.k)
+            d[sel] = resta_suave(d[sel], di, p.k)
         else:
-            d = di if d is None else union_suave(d, di, p.k)
+            d[sel] = union_suave(d[sel], di, p.k)
     return d
 
 
 # ---------------------------------------------------------------------------
 # Malla
 # ---------------------------------------------------------------------------
+
+def _refinar_banda(D, piezas, lo, h, f):
+    """Rejilla f veces más fina: interpolación de la gruesa en todo el volumen y SDF
+    exacta en la banda junto a la piel."""
+    from scipy.ndimage import binary_dilation, zoom
+    forma = tuple((n - 1) * f + 1 for n in D.shape)
+    escala = [m / n for m, n in zip(forma, D.shape)]
+    Df = zoom(D, escala, order=1, grid_mode=False).astype(np.float32)
+    banda = binary_dilation(np.abs(D) < 2.0 * h, iterations=1)
+    banda_f = zoom(banda.astype(np.uint8), escala, order=0, grid_mode=False).astype(bool)
+    idx = np.nonzero(banda_f)
+    hf = h / f
+    P = (np.column_stack(idx) * hf + lo).astype(np.float32)
+    for i in range(0, len(P), 2_000_000):                    # por bloques: memoria acotada
+        Df[tuple(ix[i:i + 2_000_000] for ix in idx)] = evaluar_sdf(P[i:i + 2_000_000], piezas)
+    return Df, hf
+
 
 def componente_mayor(malla: trimesh.Trimesh) -> trimesh.Trimesh:
     """Se queda con la pieza conexa más grande. Marching cubes a resolución
@@ -434,10 +460,14 @@ def componente_mayor(malla: trimesh.Trimesh) -> trimesh.Trimesh:
 
 
 def malla_fetal(eg: float, resolucion: int = 180, prop: Proporciones | None = None,
-                suavizado: int = 10, devolver_info: bool = False):
+                suavizado: int = 10, devolver_info: bool = False, refinar: int = 2):
     """Malla triangulada (trimesh.Trimesh, mm) del feto a `eg` semanas.
 
     resolucion: número de vóxeles a lo largo del eje más largo de la caja.
+    refinar: la rejilla final es `refinar` veces más fina, pero la SDF exacta sólo se
+    calcula cerca de la piel (a menos de dos vóxeles gruesos); el resto se interpola de
+    la rejilla gruesa. Así dedos, ortejos y rasgos de la cara, más delgados que un
+    vóxel grueso, aparecen sin pagar una rejilla fina completa. 1 = sin refinar.
     """
     piezas, info = construir_piezas(eg, prop)
     lo, hi = _caja(piezas)
@@ -448,6 +478,9 @@ def malla_fetal(eg: float, resolucion: int = 180, prop: Proporciones | None = No
     X, Y, Z = np.meshgrid(*ejes, indexing="ij")
     P = np.column_stack([X.ravel(), Y.ravel(), Z.ravel()])
     D = evaluar_sdf(P, piezas).reshape(X.shape)
+    del X, Y, Z, P
+    if refinar > 1:
+        D, h = _refinar_banda(D, piezas, lo, h, int(refinar))
 
     verts, caras, _, _ = marching_cubes(D, level=0.0, spacing=(h, h, h))
     verts += lo
@@ -522,6 +555,8 @@ def main(argv=None):
                     "solo con una EG. Por omisión feto_<EG>s.stl")
     ap.add_argument("-r", "--resolucion", type=int, default=180,
                     help="vóxeles en el eje más largo (def. 180)")
+    ap.add_argument("--refinar", type=int, default=2,
+                    help="rejilla N veces más fina junto a la piel (dedos, cara); 1 = sin refinar")
     ap.add_argument("--informe", action="store_true",
                     help="imprimir biometría de entrada y medidas de la malla")
     args = ap.parse_args(argv)
@@ -529,7 +564,7 @@ def main(argv=None):
     if args.salida and len(args.eg) > 1:
         ap.error("--salida solo admite una edad gestacional")
     for eg in args.eg:
-        malla, info = malla_fetal(eg, args.resolucion, devolver_info=True)
+        malla, info = malla_fetal(eg, args.resolucion, devolver_info=True, refinar=args.refinar)
         nombre = args.salida or f"feto_{eg:g}s.stl"
         malla.export(nombre)
         print(f"{nombre}: {len(malla.faces)} triángulos")

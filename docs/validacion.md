@@ -7,18 +7,18 @@ automáticas (`pytest`) comprueban una parte en cada cambio.
 
 ## Superficie
 
-`feto-malla 12 20 28 36 40 --informe -r 180`. CC y DBP se miden en un corte axial de la
+`feto-malla 12 20 28 36 40 --informe -r 180` (con la rejilla refinada junto a la piel). CC y DBP se miden en un corte axial de la
 cabeza, descontando el cuero cabelludo (borde externo del cráneo, como en Hadlock).
 LCC = longitud cráneo-caudal aproximada; PFE = peso fetal estimado (Hadlock 1985).
 
 | EG | DBP Hadlock → malla (mm) | CC Hadlock → malla (mm) | LCC (mm) | Volumen (cm³) | PFE (g) | Hermética |
 |---|---|---|---|---|---|---|
 | 12 | 17.3 → 17.2 | 68.0 → 67.1 | 52 | 12 | (fuera de rango) | sí |
-| 20 | 46.3 → 45.8 | 176.8 → 174.8 | 154 | 294 | 336 | sí |
-| 28 | 70.6 → 69.8 | 266.1 → 263.0 | 242 | 1191 | 1230 | sí |
-| 36 | 88.3 → 87.4 | 327.9 → 324.2 | 314 | 2711 | 2828 | sí |
-| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3160 | 3280 | sí |
-| 40 | 94.2 → 93.1 | 346.1 → 342.2 | 344 | 3624 | 3725 | sí |
+| 20 | 46.3 → 45.8 | 176.8 → 174.8 | 154 | 296 | 336 | sí |
+| 28 | 70.6 → 69.8 | 266.1 → 263.1 | 242 | 1195 | 1230 | sí |
+| 36 | 88.3 → 87.4 | 327.9 → 324.3 | 314 | 2720 | 2828 | sí |
+| 38 | 91.5 → 90.5 | 338.2 → 334.4 | 330 | 3171 | 3280 | sí |
+| 40 | 94.2 → 93.1 | 346.1 → 342.3 | 344 | 3637 | 3725 | sí |
 
 Con una densidad de ~1.04 g/cm³, el volumen queda a pocos por ciento del PFE desde
 las 28 semanas y ~10 % por debajo a las 20 semanas.

@@ -69,3 +69,47 @@ def test_nariz_labios_corta_la_cara(escena):
     _, res = _medir(escena, "nariz_labios")
     lab = res["etiquetas"]
     assert (lab == T["fetal"]).any() and (lab == T["amniotico"]).any()
+
+
+@pytest.mark.parametrize("eg", [16, 24, 32, 38])
+def test_ojos_y_mandibula_siguen_los_nomogramas(eg):
+    from feto_parametrico.cabeza import distancias_oculares, longitud_mandibula
+    f = construir_feto(eg)
+    o = {x.nombre: x for x in f.organos}
+    r = o["ojo_i"].p["semiejes"][0]
+    sep = float(np.linalg.norm(o["ojo_i"].centro - o["ojo_d"].centro))
+    bod, iod = distancias_oculares(eg)
+    # la órbita ósea rodea el globo: los bordes óseos quedan ~0.5 mm por fuera
+    assert sep + 2 * r + 0.9 == pytest.approx(bod, abs=1.5)
+    assert sep - 2 * r - 0.9 == pytest.approx(iod, abs=1.5)
+    # articulación temporomandibular (extremo de la rama) a sínfisis (frente del arco)
+    rama = o["rama_mandibular+1"]
+    arco = [x for x in f.organos if x.nombre.startswith("mandibula")]
+    sinfisis = max((x.p["a"] for x in arco), key=lambda q: float(q @ f.marcos["cabeza"][1][:, 0]))
+    assert np.linalg.norm(rama.p["b"] - sinfisis) == pytest.approx(longitud_mandibula(eg), rel=0.12)
+
+
+def test_cara_relativamente_mas_ancha_a_mitad_de_la_gestacion():
+    # la distancia binocular crece más despacio que el DBP: la cara se "angosta"
+    from feto_parametrico.cabeza import distancias_oculares
+    r = [distancias_oculares(eg)[0] / construir_feto(eg).bio["DBP"] for eg in (16, 38)]
+    assert r[0] > r[1]
+
+
+def test_malla_refinada_muestra_dedos():
+    from scipy.spatial import cKDTree
+    from feto_parametrico.superficie import construir_piezas, malla_fetal
+    piezas, _ = construir_piezas(24)
+    # centro del casquete de la punta de cada dedo (sin contar el pulgar)
+    puntas = np.array([p.params["b"] for p in piezas
+                       if p.nombre.startswith(("dedo2", "dedo3", "dedo4", "dedo5"))
+                       and p.nombre.endswith("_2")])
+    dist = {}
+    for refinar in (1, 2):
+        m, info = malla_fetal(24, 110, devolver_info=True, refinar=refinar)
+        d, _ = cKDTree(m.vertices).query(puntas + info["desplazamiento"])   # vértice más cercano
+        dist[refinar] = d
+    assert len(puntas) == 8
+    # con la rejilla fina la superficie pasa a ~1 radio de la punta de cada dedo
+    assert dist[2].max() < 1.6
+    assert dist[2].mean() < 0.6 * dist[1].mean()

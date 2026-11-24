@@ -39,7 +39,7 @@ CA y LF, y sirve para comprobar el volumen de la malla.
 | Extremidades | conos redondeados; fémur con 0.04·LF de cartílago en cada extremo (la diáfisis osificada mide LF); tibia, húmero y cúbito proporcionales al LF |
 | Manos y pies | palma con cuatro dedos de tres falanges y pulgar de dos, algo separados, que se cierran con `Postura.puno` (0 abierta, 1 puño); pie con talón, planta y cinco ortejos en abanico (`extremidades.py`, compartido con la escena 3D) |
 | Pie | talón a punta = LF (razón LF/pie = 1 en toda la gestación) |
-| Superficie | unión suave de funciones de distancia con signo (SDF) → marching cubes → pieza conexa mayor → suavizado de Taubin |
+| Superficie | unión suave de funciones de distancia con signo (SDF) → marching cubes → pieza conexa mayor → suavizado de Taubin. Junto a la piel la rejilla es el doble de fina (`refinar=2`): la SDF exacta sólo se calcula a menos de dos vóxeles de la piel y el resto se interpola, así aparecen dedos y ortejos sin pagar una rejilla fina completa |
 
 ![Fetos de 12 a 40 semanas a escala real](img/serie_crecimiento.png)
 
@@ -93,6 +93,18 @@ Medidas de referencia: DTC con `EG = 0.557·DTC + 8.84`
 las 18 semanas a 7.6 mm a las 23 ([doi:10.1515/jpm-2014-0296](https://doi.org/10.1515/jpm-2014-0296)),
 grosor prenasal 0.61 × hueso nasal ([PubMed 21584886](https://pubmed.ncbi.nlm.nih.gov/21584886/));
 cisterna magna de 2.5 + 0.12·EG mm, dentro del intervalo normal de 2 a 10 mm.
+
+El ancho de la cara no es una fracción fija del cráneo: lo fijan las distancias
+binocular (`BOD = 2.590 + 1.420·EG`) e interocular (`IOD = 2.304 + 0.510·EG`) de 595
+fetos de 15 a 40 semanas (*Fetal ocular distance in normal pregnancies*), que coinciden
+con las de resonancia de [Velasco-Annis et al. 2015](https://doi.org/10.1002/pd.4558)
+(BOD 30.8 mm a las 20 semanas). De ellas salen la separación y el tamaño de los ojos, y
+con ellas escalan párpados, mejillas, nariz, labios, boca, maxilar y mandíbula. Como la
+BOD crece más despacio que el DBP, a mitad de la gestación la cara es relativamente más
+ancha que al término. La mandíbula (articulación temporomandibular a sínfisis) sigue a
+Otto y Platt 1991: `ML = −2.41 + 0.297·EG − 0.0027·EG²` cm. Los ojos y los párpados se
+colocan bajo la piel real (cara o cráneo, la que quede más adelante), con el párpado
+asomando medio milímetro.
 
 ![La cara de tres cuartos a 16, 24 y 32 semanas](img/cara.png)
 

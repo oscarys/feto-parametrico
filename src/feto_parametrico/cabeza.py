@@ -16,6 +16,10 @@ Medidas de referencia (mm, EG en semanas):
   (doi:10.1515/jpm-2014-0296); grosor prenasal ≈ 0.61 × hueso nasal
   (https://pubmed.ncbi.nlm.nih.gov/21584886/).
 * Cisterna magna: profundidad normal de 2 a 10 mm.
+* Ojos: distancia binocular y distancia interocular por EG; el ancho de la cara se
+  toma de ellas, así que la cara no crece en proporción fija con el cráneo (a mitad
+  de la gestación es relativamente más ancha).
+* Mandíbula: longitud de la articulación temporomandibular a la sínfisis por EG.
 
 Licencia: GPL-3.0-or-later
 """
@@ -35,6 +39,18 @@ def dtc(eg: float) -> float:
 def hueso_nasal(eg: float) -> float:
     """Longitud del hueso nasal (mm)."""
     return 0.38 * eg - 1.1
+
+
+def distancias_oculares(eg: float):
+    """(binocular, interocular) en mm: bordes externos e internos de las órbitas
+    (BOD = 2.590 + 1.420·EG, IOD = 2.304 + 0.510·EG; 595 fetos de 15 a 40 semanas)."""
+    return 2.590 + 1.420 * eg, 2.304 + 0.510 * eg
+
+
+def longitud_mandibula(eg: float) -> float:
+    """Articulación temporomandibular a sínfisis (mm): Otto y Platt 1991,
+    ML = −2.41 + 0.297·EG − 0.0027·EG² (cm)."""
+    return 10 * (-2.41 + 0.297 * eg - 0.0027 * eg ** 2)
 
 
 def cisterna_magna(eg: float) -> float:
@@ -104,40 +120,70 @@ def geometria(a: float, b: float, c: float, eg: float) -> dict:
         lista.append(dict(nombre=nombre, tipo="cono", a=E(*p), b=E(*q), ra=ra, rb=rb,
                           k=k, tejido=tejido))
 
+    # ---------------------------------------------------- medidas de la cara (mm)
+    bod, iod = distancias_oculares(eg)
+    r_ojo = 0.25 * (bod - iod) - 0.45                      # radio del globo (la órbita lo rodea)
+    e = 0.25 * (bod + iod)                                 # semidistancia entre centros oculares
+    w = e / b                                              # en unidades de b
+    ancho = max(0.66 * b, e + 2.2 * r_ojo)                 # semieje lateral de la cara base
+    zo = -0.24                                             # altura de los ojos
+
+    def frente_cara(y, z):
+        """x normalizada de la superficie de la cara base a la altura (y mm, z norm.)."""
+        q = 1 - (y / ancho) ** 2 - ((z + 0.48) / 0.50) ** 2
+        return 0.50 + 0.44 * math.sqrt(max(q, 0.0))
+
+    def piel_en(y, z):
+        """x normalizada de la piel (cara base o cráneo, el más adelantado) en (y mm, z)."""
+        piel = 1.2 + 0.02 * dbp                            # cuero cabelludo, como en feto3d
+        A, B, C = a + piel, b + piel, c + piel
+        q = 1 - (y / B) ** 2 - (z * c / C) ** 2
+        x_cr = A * math.sqrt(max(q, 0.0)) / a
+        n, d, k = corte_cara(a, c)                         # el cráneo está recortado delante
+        x_corte = (d - k / 4 - n[2] * z * c) / n[0] / a
+        return max(frente_cara(y, z), min(x_cr, x_corte))
+
+    # el globo queda bajo el párpado: su polo anterior, ~1 mm por dentro de la piel, y el
+    # párpado asoma un poco por delante
+    x_piel = piel_en(e, zo)
+    x_ojo = x_piel - (r_ojo + 0.8 + 0.006 * dbp) / a
+    x_parpado = x_piel + (0.5 + 0.006 * dbp) / a           # frente del párpado
+
     # ---------------------------------------------------------------- piel
-    elip(piel, "cara", (0.50, 0, -0.48), (0.44 * a, 0.66 * b, 0.50 * c), 0.25 * b)
+    elip(piel, "cara", (0.50, 0, -0.48), (0.44 * a, ancho, 0.50 * c), 0.25 * b)
     for lado in (+1, -1):
-        elip(piel, f"mejilla{lado:+d}", (0.66, 0.36 * lado, -0.50),
-             (0.24 * a, 0.24 * b, 0.24 * c), 0.12 * b)
-        elip(piel, f"parpado{lado:+d}", (0.84, 0.30 * lado, -0.24),
-             (0.07 * a, 0.14 * b, 0.10 * c), 0.03 * b)
-        elip(piel, f"ala_nasal{lado:+d}", (0.94, 0.11 * lado, -0.42),
-             (0.05 * a, 0.06 * b, 0.045 * c), 0.04 * b)
-    cono(piel, "dorso_nasal", (0.90, 0, -0.18), (0.98, 0, -0.36), 0.05 * b, 0.065 * b, 0.06 * b)
-    elip(piel, "punta_nasal", (0.98, 0, -0.39), (0.055 * a, 0.10 * b, 0.06 * c), 0.05 * b)
-    elip(piel, "labio_superior", (0.93, 0, -0.53), (0.07 * a, 0.20 * b, 0.065 * c), 0.05 * b)
-    elip(piel, "labio_inferior", (0.91, 0, -0.64), (0.065 * a, 0.17 * b, 0.06 * c), 0.05 * b)
-    elip(piel, "menton", (0.80, 0, -0.86), (0.14 * a, 0.20 * b, 0.13 * c), 0.10 * b)
+        elip(piel, f"mejilla{lado:+d}", (0.66, (e + 0.25 * r_ojo) / b * lado, -0.50),
+             (0.24 * a, max(0.24 * b, 1.3 * r_ojo), 0.24 * c), 0.12 * b)
+        elip(piel, f"parpado{lado:+d}", (x_parpado - 0.07, w * lado, zo),
+             (0.07 * a, 1.25 * r_ojo, 0.10 * c), 0.03 * b)
+        elip(piel, f"ala_nasal{lado:+d}", (0.94, 0.37 * w * lado, -0.42),
+             (0.05 * a, 0.20 * e, 0.045 * c), 0.04 * b)
+    cono(piel, "dorso_nasal", (0.90, 0, -0.18), (0.98, 0, -0.36), 0.17 * e, 0.22 * e, 0.06 * b)
+    elip(piel, "punta_nasal", (0.98, 0, -0.39), (0.055 * a, 0.33 * e, 0.06 * c), 0.05 * b)
+    elip(piel, "labio_superior", (0.93, 0, -0.53), (0.07 * a, 0.67 * e, 0.065 * c), 0.05 * b)
+    elip(piel, "labio_inferior", (0.91, 0, -0.64), (0.065 * a, 0.57 * e, 0.06 * c), 0.05 * b)
+    elip(piel, "menton", (0.80, 0, -0.86), (0.14 * a, 0.67 * e, 0.13 * c), 0.10 * b)
 
     # ------------------------------------------------- restas (boca, narinas)
     hendidura = 0.25 + 0.01 * dbp
-    elip(restas, "boca", (0.97, 0, -0.585), (0.10 * a, 0.15 * b, hendidura), 0.3)
+    elip(restas, "boca", (0.97, 0, -0.585), (0.10 * a, 0.50 * e, hendidura), 0.3)
     for lado in (+1, -1):
-        elip(restas, f"fisura_palpebral{lado:+d}", (0.905, 0.30 * lado, -0.25),
-             (0.03 * a, 0.12 * b, 0.6 * hendidura), 0.3)
+        elip(restas, f"fisura_palpebral{lado:+d}",
+             (x_parpado, w * lado, zo - 0.01), (0.03 * a, 1.05 * r_ojo,
+                                                                   0.6 * hendidura), 0.3)
         r = 0.5 + 0.012 * dbp
-        elip(restas, f"narina{lado:+d}", (0.985, 0.055 * lado, -0.435), (r, 0.8 * r, 0.7 * r), 0.2)
+        elip(restas, f"narina{lado:+d}", (0.985, 0.18 * w * lado, -0.435), (r, 0.8 * r, 0.7 * r),
+             0.2)
 
     # ---------------------------------------------------------- ojos
-    r_ojo = 0.11 * a
     for lado, sfx in ((+1, "i"), (-1, "d")):
-        y = 0.30 * lado
+        y = w * lado
         # órbita ósea: cáscara abierta por delante
-        org.append(dict(nombre=f"orbita_{sfx}", tipo="cascara", centro=E(0.74, y, -0.24),
+        org.append(dict(nombre=f"orbita_{sfx}", tipo="cascara", centro=E(x_ojo, y, zo),
                         semiejes=(r_ojo + 0.9,) * 3, grosor=0.5 + 0.01 * dbp,
                         corte=(np.array([1.0, 0.0, 0.0]), 0.35 * r_ojo), k=0.0, tejido="hueso"))
-        elip(org, f"ojo_{sfx}", (0.74, y, -0.24), (r_ojo, 0.11 * b, 0.11 * c), tejido="vitreo")
-        elip(org, f"cristalino_{sfx}", (0.74 + 0.72 * r_ojo / a, y, -0.24),
+        elip(org, f"ojo_{sfx}", (x_ojo, y, zo), (r_ojo,) * 3, tejido="vitreo")
+        elip(org, f"cristalino_{sfx}", (x_ojo + 0.72 * r_ojo / a, y, zo),
              (0.12 * r_ojo, 0.30 * r_ojo, 0.30 * r_ojo), tejido="cristalino")
 
     # ---------------------------------------------------------- huesos de la cara
@@ -161,11 +207,19 @@ def geometria(a: float, b: float, c: float, eg: float) -> dict:
             cono(org, f"{nombre}{i}", P[i], P[i + 1], g, g, tejido="hueso")
         return P
 
-    arco("maxilar", 0.52, -0.52, 0.36 * a, 0.34 * b, -75, 75)
-    elip(org, "paladar", (0.62, 0, -0.47), (0.26 * a, 0.28 * b, 0.6 + 0.008 * dbp), tejido="hueso")
-    P = arco("mandibula", 0.42, -0.76, 0.40 * a, 0.42 * b, -90, 90)
+    arco("maxilar", 0.52, -0.52, 0.36 * a, 1.13 * e, -75, 75)
+    elip(org, "paladar", (0.62, 0, -0.47), (0.26 * a, 0.93 * e, 0.6 + 0.008 * dbp), tejido="hueso")
+    # mandíbula: el cóndilo se coloca para que articulación-sínfisis mida lo del nomograma
+    ry = min(1.40 * e, 0.62 * b)
+    P = arco("mandibula", 0.42, -0.76, 0.40 * a, ry, -90, 90)
+    sinfisis = np.array([0.82 * a, 0.0, -0.76 * c])
+    y_cond = min(1.75 * e, 0.80 * b)
+    ml = longitud_mandibula(eg)
+    dz = (-0.50 + 0.76) * c
+    dx = math.sqrt(max(ml ** 2 - y_cond ** 2 - dz ** 2, (0.10 * a) ** 2))
+    x_cond = (sinfisis[0] - dx) / a
     for extremo, lado in ((P[0], -1), (P[-1], +1)):
-        cono(org, f"rama_mandibular{lado:+d}", extremo, (0.10, 0.55 * lado, -0.50), g, g,
+        cono(org, f"rama_mandibular{lado:+d}", extremo, (x_cond, y_cond / b * lado, -0.50), g, g,
              tejido="hueso")
 
     # ---------------------------------------------------------- fosa posterior
@@ -201,4 +255,5 @@ def geometria(a: float, b: float, c: float, eg: float) -> dict:
              (0.22 * t, 0.25 * t, 0.25 * t), tejido="cerebelo")
     elip(org, "cerebelo", (x_cb / a, 0, zc / c), (vx, 0.12 * t, 0.24 * t), tejido="vermis")
     return {"piel": piel, "restas": restas, "organos": org,
-            "medidas": {"DTC": t, "CM": cm, "HN": nbl}}
+            "medidas": {"DTC": t, "CM": cm, "HN": nbl, "BOD": bod, "IOD": iod,
+                        "DO": 2 * r_ojo, "LM": ml}}
