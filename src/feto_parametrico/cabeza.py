@@ -43,13 +43,14 @@ def hueso_nasal(eg: float) -> float:
 
 def distancias_oculares(eg: float):
     """(binocular, interocular) en mm: bordes externos e internos de las órbitas
-    (BOD = 2.590 + 1.420·EG, IOD = 2.304 + 0.510·EG; 595 fetos de 15 a 40 semanas)."""
+    (BOD = 2.590 + 1.420·EG, IOD = 2.304 + 0.510·EG; 595 fetos de 15 a 40 semanas;
+    Sukonpan y Phupong, J Med Assoc Thai 2008)."""
     return 2.590 + 1.420 * eg, 2.304 + 0.510 * eg
 
 
 def longitud_mandibula(eg: float) -> float:
     """Articulación temporomandibular a sínfisis (mm): Otto y Platt 1991,
-    ML = −2.41 + 0.297·EG − 0.0027·EG² (cm)."""
+    doi:10.1046/j.1469-0705.1991.01010012.x; ML = −2.41 + 0.297·EG − 0.0027·EG² (cm)."""
     return 10 * (-2.41 + 0.297 * eg - 0.0027 * eg ** 2)
 
 
